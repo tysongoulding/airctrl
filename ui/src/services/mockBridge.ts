@@ -67,6 +67,18 @@ export class MockTauriIpcBridge {
       pid: 1234,
       target: args?.path ?? "app.exe",
     }),
+    injectText: (args: any) => ({
+      success: true,
+      status: "Success",
+      method: "ClipboardPaste",
+      text_length: (args?.text ?? "").length,
+    }),
+    inject_text: (args: any) => ({
+      success: true,
+      status: "Success",
+      method: "ClipboardPaste",
+      text_length: (args?.text ?? "").length,
+    }),
   };
 
   public invoke<T = any>(command: string, args?: any): Promise<T> {

@@ -115,6 +115,36 @@ impl ActionHotkeyStateMachine {
                 }
                 _ => ActionStateTransitionResult::NoChange,
             },
+            HotkeyMode::SmartDual => match self.state {
+                ActionState::Idle => {
+                    let from = self.state.clone();
+                    let to = ActionState::ActionListening;
+                    self.state = to.clone();
+                    self.press_start_time_ms = timestamp_ms;
+                    self.target_window_id = active_window_id;
+                    self.dial.show();
+
+                    ActionStateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        instruction: ActionMachineInstruction::StartListening {
+                            target_window_id: active_window_id,
+                        },
+                    }
+                }
+                ActionState::ActionListening => {
+                    let from = self.state.clone();
+                    let to = ActionState::ActionParsing;
+                    self.state = to.clone();
+
+                    ActionStateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        instruction: ActionMachineInstruction::StopListeningAndParse,
+                    }
+                }
+                _ => ActionStateTransitionResult::NoChange,
+            },
         }
     }
 
@@ -154,6 +184,38 @@ impl ActionHotkeyStateMachine {
                 }
             }
             HotkeyMode::Toggle => ActionStateTransitionResult::NoChange,
+            HotkeyMode::SmartDual => {
+                if self.state == ActionState::ActionListening {
+                    let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
+                    if duration >= 250 {
+                        let from = self.state.clone();
+                        let to = ActionState::ActionParsing;
+                        self.state = to.clone();
+
+                        ActionStateTransitionResult::Transitioned {
+                            from,
+                            to,
+                            instruction: ActionMachineInstruction::StopListeningAndParse,
+                        }
+                    } else if duration < 30 {
+                        let from = self.state.clone();
+                        let to = ActionState::Idle;
+                        self.state = to.clone();
+                        self.target_window_id = None;
+                        self.dial.hide();
+
+                        ActionStateTransitionResult::Transitioned {
+                            from,
+                            to,
+                            instruction: ActionMachineInstruction::CancelListeningDiscardBuffer,
+                        }
+                    } else {
+                        ActionStateTransitionResult::NoChange
+                    }
+                } else {
+                    ActionStateTransitionResult::NoChange
+                }
+            }
         }
     }
 

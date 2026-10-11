@@ -18,6 +18,10 @@ export interface SettingsState {
   hotkey_stt: string; // "Ctrl+Win" or "Ctrl+Spacebar"
   push_to_talk: boolean; // true = push-to-talk, false = toggle
   whisper_model: string; // "models/ggml-tiny.en.bin"
+  stt_mode?: "smart_dual" | "push_to_talk" | "toggle";
+  stt_overlay_position?: "bottom" | "top";
+  stt_audio_cues?: boolean;
+  stt_auto_paste?: boolean;
 
   // Speech-to-Action & Gestures
   hotkey_sta?: string; // "Ctrl+Shift+Space"

@@ -461,4 +461,25 @@ fn test_ipc_trigger_action_parameter_first() {
     assert_eq!(res_win_center["success"], true);
 }
 
+#[test]
+fn test_ipc_inject_text_and_auto_inject() {
+    let bridge = IpcBridge::default();
+
+    // 1. Direct injectText command
+    let res_inject = bridge
+        .invoke("injectText", Some(json!({ "text": "Hello world from Handy dictation" })))
+        .expect("injectText failed");
+    assert_eq!(res_inject["success"], true);
+    assert_eq!(res_inject["text_length"], 32);
+
+    // 2. stopRecording with auto_inject
+    bridge.invoke("startRecording", None).expect("startRecording failed");
+    let res_stop = bridge
+        .invoke("stopRecording", Some(json!({ "auto_inject": true })))
+        .expect("stopRecording with auto_inject failed");
+    assert_eq!(res_stop["status"], "TranscriptionReady");
+    assert!(!res_stop["injected"].is_null());
+}
+
+
 

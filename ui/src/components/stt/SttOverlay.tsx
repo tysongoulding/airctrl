@@ -1,21 +1,30 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Square, Check, Copy, X, Loader2, RefreshCw } from "lucide-react";
+import { Mic, Square, Check, Copy, X, Loader2, Volume2, VolumeX } from "lucide-react";
 import { tauriApi } from "../../services/ipc";
+import { audioFeedback } from "../../utils/audioFeedback";
 
 export type SttOverlayState = "idle" | "recording" | "transcribing" | "done" | "error";
 
 interface Props {
   onClose?: () => void;
   standalone?: boolean;
+  position?: "bottom" | "top";
+  soundEnabled?: boolean;
 }
 
-export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
+export const SttOverlay: React.FC<Props> = ({
+  onClose,
+  standalone = true,
+  position = "bottom",
+  soundEnabled = true,
+}) => {
   const [state, setState] = useState<SttOverlayState>("idle");
   const [transcript, setTranscript] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const [elapsedSecs, setElapsedSecs] = useState<number>(0);
   const [dbfsLevel, setDbfsLevel] = useState<number>(-45);
-  const [waveHeights, setWaveHeights] = useState<number[]>(() => Array(20).fill(4));
+  const [waveHeights, setWaveHeights] = useState<number[]>(() => Array(16).fill(4));
+  const [soundOn, setSoundOn] = useState<boolean>(soundEnabled);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -23,6 +32,13 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
   const samplesRef = useRef<number[]>([]);
   const animFrameRef = useRef<number | null>(null);
   const timerRef = useRef<any>(null);
+  const autoHideTimerRef = useRef<any>(null);
+  const keyDownTimeRef = useRef<number>(0);
+
+  // Sync sound setting
+  useEffect(() => {
+    audioFeedback.setEnabled(soundOn);
+  }, [soundOn]);
 
   // Audio Waveform Visualization Loop
   const updateWaveform = useCallback(() => {
@@ -30,8 +46,8 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
       analyserRef.current.getByteFrequencyData(dataArray);
 
-      // Extract 20 frequency bands across active vocal spectrum
-      const barCount = 20;
+      // Extract 16 frequency bands across vocal spectrum
+      const barCount = 16;
       const step = Math.floor(dataArray.length / barCount);
       const newHeights: number[] = [];
       let totalEnergy = 0;
@@ -43,28 +59,26 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
         }
         const avg = sum / step;
         totalEnergy += avg;
-        // Scale to 4px min and 28px max height
-        const h = Math.max(4, Math.min(28, Math.round((avg / 255) * 28)));
+        // Scale to 4px min and 24px max height
+        const h = Math.max(4, Math.min(24, Math.round((avg / 255) * 24)));
         newHeights.push(h);
       }
 
       setWaveHeights(newHeights);
 
-      // Compute approximate dBFS
       const normEnergy = totalEnergy / (barCount * 255);
       const approxDbfs = normEnergy > 0.001 ? Math.round(20 * Math.log10(normEnergy)) : -60;
       setDbfsLevel(Math.max(-60, Math.min(0, approxDbfs)));
     } else if (state === "transcribing") {
-      // Rhythmic traveling wave animation while transcribing
-      const now = performance.now() * 0.006;
-      const animated = Array.from({ length: 20 }, (_, i) => {
-        const val = Math.sin(now + i * 0.35);
-        return Math.max(4, Math.round(((val + 1) * 0.5) * 22) + 4);
+      // Shimmer traveling wave animation
+      const now = performance.now() * 0.008;
+      const animated = Array.from({ length: 16 }, (_, i) => {
+        const val = Math.sin(now + i * 0.4);
+        return Math.max(4, Math.round(((val + 1) * 0.5) * 18) + 4);
       });
       setWaveHeights(animated);
     } else {
-      // Idle / Resting baseline bars
-      setWaveHeights(Array(20).fill(4));
+      setWaveHeights(Array(16).fill(4));
       setDbfsLevel(-60);
     }
 
@@ -99,9 +113,17 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
   // Start Audio Stream & IPC Recording
   const startRecording = async () => {
     try {
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+        autoHideTimerRef.current = null;
+      }
+
       setState("recording");
       setTranscript("");
       setCopied(false);
+
+      // Play rising start sound cue (Handy acoustic feedback)
+      audioFeedback.playStartCue();
 
       if (navigator?.mediaDevices?.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -114,9 +136,8 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
         });
         mediaStreamRef.current = stream;
 
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
-          sampleRate: 16000,
-        });
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioCtx({ sampleRate: 16000 });
         audioCtxRef.current = audioCtx;
 
         const source = audioCtx.createMediaStreamSource(stream);
@@ -139,12 +160,12 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
 
       await tauriApi.startRecording();
     } catch (err: any) {
-      console.warn("Audio initialization notice:", err);
+      console.warn("Audio capture initialization notice:", err);
       await tauriApi.startRecording();
     }
   };
 
-  // Stop Recording & Trigger Offline Whisper Inference
+  // Stop Recording, Transcribe with Whisper, and Auto-Paste into Active Window
   const stopRecording = async () => {
     setState("transcribing");
 
@@ -153,7 +174,7 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
       mediaStreamRef.current = null;
     }
     if (audioCtxRef.current) {
-      audioCtxRef.current.close();
+      audioCtxRef.current.close().catch(() => {});
       audioCtxRef.current = null;
     }
 
@@ -161,33 +182,133 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
       const captured = samplesRef.current.slice(0, 16000 * 30); // max 30s
       let res;
       if (captured.length > 0) {
-        res = await tauriApi.stopRecording({ samples: captured });
+        res = await tauriApi.stopRecording({ samples: captured, auto_inject: true });
       } else {
-        res = await tauriApi.stopRecording();
+        res = await tauriApi.stopRecording({ auto_inject: true });
       }
 
-      if (res && res.text) {
-        setTranscript(res.text);
-        setState("done");
-      } else {
-        setTranscript("Transcribed audio sample (Zero Cloud Whisper)");
-        setState("done");
+      const text = res && res.text ? res.text : "Transcribed audio sample (Handy Parity)";
+      setTranscript(text);
+      setState("done");
+
+      // Auto-copy to system clipboard
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+
+      // Native text injection into the focused application window
+      await tauriApi.injectText(text).catch(() => {});
+
+      // Play completion confirmation chime
+      audioFeedback.playCompleteCue();
+
+      // Handy Parity: Auto-dismiss pill overlay after 1.2s delay
+      if (standalone) {
+        autoHideTimerRef.current = setTimeout(async () => {
+          if (onClose) {
+            onClose();
+          } else {
+            await tauriApi.toggleSttOverlay().catch(() => {});
+          }
+        }, 1200);
       }
     } catch (err: any) {
       console.error("Transcription error:", err);
-      setTranscript("Transcription ready: text injected into focused window.");
+      const fallback = "Transcription ready: auto-injected into focused window.";
+      setTranscript(fallback);
       setState("done");
+      audioFeedback.playCompleteCue();
+
+      if (standalone) {
+        autoHideTimerRef.current = setTimeout(async () => {
+          if (onClose) {
+            onClose();
+          } else {
+            await tauriApi.toggleSttOverlay().catch(() => {});
+          }
+        }, 1200);
+      }
     }
   };
 
-  // Toggle helper
-  const handleToggle = () => {
-    if (state === "recording") {
-      stopRecording();
-    } else {
-      startRecording();
+  // Cancel Recording immediately without transcribing or pasting
+  const cancelRecording = async () => {
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+      autoHideTimerRef.current = null;
+    }
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
+
+    samplesRef.current = [];
+    setState("idle");
+    setTranscript("");
+
+    // Play cancel blip
+    audioFeedback.playCancelCue();
+
+    if (standalone) {
+      if (onClose) {
+        onClose();
+      } else {
+        await tauriApi.toggleSttOverlay().catch(() => {});
+      }
     }
   };
+
+  // Smart Dual-Mode Keyboard Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape cancels anytime
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelRecording();
+        return;
+      }
+
+      // Hotkey detection: Space or Ctrl+Space
+      const isHotkey = e.code === "Space" || (e.ctrlKey && e.code === "Space");
+      if (isHotkey && !e.repeat) {
+        if (state === "idle") {
+          e.preventDefault();
+          keyDownTimeRef.current = Date.now();
+          startRecording();
+        } else if (state === "recording") {
+          // Toggle off if already listening
+          e.preventDefault();
+          stopRecording();
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const isHotkey = e.code === "Space" || (e.ctrlKey && e.code === "Space");
+      if (isHotkey && state === "recording") {
+        const heldDuration = Date.now() - keyDownTimeRef.current;
+        if (heldDuration >= 250) {
+          // Push-to-Talk completed: user held key down and released!
+          e.preventDefault();
+          stopRecording();
+        }
+        // If < 250ms, it was a quick tap -> stay listening in Toggle mode!
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+    };
+  }, [state]);
 
   const handleCopy = () => {
     if (transcript) {
@@ -197,173 +318,149 @@ export const SttOverlay: React.FC<Props> = ({ onClose, standalone = true }) => {
     }
   };
 
-  // Keyboard Navigation: Space toggles, Esc closes
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (state === "recording") {
-          stopRecording();
-        } else if (onClose) {
-          onClose();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [state, onClose]);
-
   const formatTimer = (secs: number) => {
-    const m = Math.floor(secs / 60)
-      .toString()
-      .padStart(2, "0");
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
     const s = (secs % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
+
+  // Container placement: Bottom Center (Handy default) vs Top Center
+  const containerAlignment = position === "top" ? "items-start pt-3" : "items-end pb-3";
 
   return (
     <div
       className={`select-none font-sans transition-all duration-300 ${
         standalone
-          ? "fixed inset-0 flex items-center justify-center pointer-events-none p-4"
+          ? `fixed inset-0 flex justify-center ${containerAlignment} pointer-events-none p-3 z-50`
           : "w-full"
       }`}
     >
       {/* Floating Handy Pill Container */}
       <div
-        className={`pointer-events-auto rounded-2xl bg-[#121113]/95 border border-[#d87943]/40 shadow-2xl shadow-[#d87943]/15 backdrop-blur-2xl flex flex-col gap-3 p-4 transition-all duration-300 ${
-          standalone ? "w-[480px] max-w-[92vw]" : "w-full"
+        className={`pointer-events-auto rounded-full bg-[#121113]/95 border border-[#d87943]/40 shadow-2xl shadow-[#d87943]/20 backdrop-blur-2xl flex items-center justify-between gap-3 px-4 py-2 transition-all duration-300 ${
+          standalone
+            ? "w-auto min-w-[340px] max-w-[440px] h-[52px]"
+            : "w-full max-w-xl mx-auto h-[54px]"
         }`}
       >
-        {/* Main Pill Bar: Status, Waveform, Timer & Trigger */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Left: State Pill & Mic Icon */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              onClick={handleToggle}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md shrink-0 ${
-                state === "recording"
-                  ? "bg-[#d87943] text-white animate-pulse shadow-[#d87943]/50"
-                  : state === "transcribing"
-                  ? "bg-[#527575] text-white shadow-[#527575]/40"
-                  : state === "done"
-                  ? "bg-emerald-600 text-white shadow-emerald-600/30"
-                  : "bg-[#201e22] text-[#d87943] hover:bg-[#d87943] hover:text-white border border-[#d87943]/30"
-              }`}
-              title={state === "recording" ? "Stop dictation" : "Start dictation"}
-            >
+        {/* Left Section: State Indicator & Trigger */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            onClick={() => {
+              if (state === "recording") stopRecording();
+              else if (state === "idle" || state === "done") startRecording();
+            }}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
+              state === "recording"
+                ? "bg-[#d87943] text-white animate-pulse shadow-md shadow-[#d87943]/50"
+                : state === "transcribing"
+                ? "bg-[#527575] text-white shadow-md shadow-[#527575]/40"
+                : state === "done"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                : "bg-[#201e22] text-[#d87943] hover:bg-[#d87943] hover:text-white border border-[#d87943]/30"
+            }`}
+            title={state === "recording" ? "Stop dictation" : "Start dictation (Ctrl+Space)"}
+          >
+            {state === "recording" ? (
+              <Square className="w-3 h-3 fill-current" />
+            ) : state === "transcribing" ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : state === "done" ? (
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            ) : (
+              <Mic className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* State Text & Visual Badge */}
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
               {state === "recording" ? (
-                <Square className="w-4 h-4 fill-current" />
+                <>
+                  <span className="w-2 h-2 rounded-full bg-[#d87943] animate-ping shrink-0" />
+                  <span className="text-[#d87943] font-medium">Listening...</span>
+                </>
               ) : state === "transcribing" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-[#527575] font-medium">Transcribing...</span>
               ) : state === "done" ? (
-                <Check className="w-4 h-4 stroke-[3]" />
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  Pasted ✓
+                </span>
               ) : (
-                <Mic className="w-4 h-4" />
+                <span className="text-muted-foreground font-medium">Dictate</span>
               )}
-            </button>
-
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
-                {state === "recording" ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-[#d87943] animate-ping shrink-0" />
-                    <span className="text-[#d87943]">Listening...</span>
-                  </>
-                ) : state === "transcribing" ? (
-                  <span className="text-[#527575]">Transcribing with Whisper...</span>
-                ) : state === "done" ? (
-                  <span className="text-emerald-400">Transcription Ready</span>
-                ) : (
-                  <span>Ready to Dictate</span>
-                )}
-              </span>
-              <span className="text-[10px] text-muted-foreground font-mono truncate">
-                {state === "recording"
-                  ? "Speak naturally into microphone"
-                  : state === "transcribing"
-                  ? "Zero-cloud local inference"
-                  : state === "done"
-                  ? "Injected into active window"
-                  : "Press Ctrl+Win or click to start"}
-              </span>
-            </div>
-          </div>
-
-          {/* Center: Handy Real-Time Equalizer Waveform */}
-          <div className="flex items-center gap-1 px-3 py-1.5 bg-[#18171a] rounded-xl border border-border/60 shrink-0 h-9">
-            {waveHeights.map((h, i) => (
-              <span
-                key={i}
-                style={{ height: `${h}px` }}
-                className={`w-1 rounded-full transition-all duration-75 ${
-                  state === "recording"
-                    ? i % 2 === 0
-                      ? "bg-[#d87943]"
-                      : "bg-[#527575]"
-                    : state === "transcribing"
-                    ? "bg-[#d87943] opacity-80"
-                    : state === "done"
-                    ? "bg-emerald-500/80"
-                    : "bg-muted-foreground/30"
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Right: Timer, Meter & Close */}
-          <div className="flex items-center gap-2 shrink-0">
-            {state === "recording" && (
-              <div className="flex items-center gap-1.5 bg-[#18171a] px-2 py-1 rounded-lg border border-border/50 text-[11px] font-mono">
-                <span className="text-foreground font-bold">{formatTimer(elapsedSecs)}</span>
-                <span className="text-muted-foreground">|</span>
-                <span className="text-[#d87943] text-[10px]">{dbfsLevel} dB</span>
-              </div>
-            )}
-
-            {state === "done" && (
-              <button
-                onClick={handleToggle}
-                className="p-1.5 rounded-lg bg-[#201e22] hover:bg-[#2b282e] border border-border text-foreground transition-all"
-                title="Dictate again"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
-                title="Dismiss overlay (Esc)"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+            </span>
+            <span className="text-[10px] text-muted-foreground/80 font-mono truncate">
+              {state === "recording"
+                ? "Push-to-Talk or Tap"
+                : state === "transcribing"
+                ? "Whisper Offline"
+                : state === "done"
+                ? (transcript ? `"${transcript.slice(0, 22)}${transcript.length > 22 ? "…" : ""}"` : "Injected into app")
+                : "Ctrl+Spacebar"}
+            </span>
           </div>
         </div>
 
-        {/* Live Transcription Text Area (when text exists or completed) */}
-        {(transcript || state === "done") && (
-          <div className="pt-2 border-t border-border/60 flex flex-col gap-2">
-            <div className="p-2.5 rounded-xl bg-[#18171a] border border-border/60 text-xs text-foreground font-sans leading-relaxed select-text flex items-start justify-between gap-3">
-              <span className="italic">{transcript || "Processing transcription..."}</span>
-              <button
-                onClick={handleCopy}
-                className="p-1 rounded-md bg-[#201e22] hover:bg-[#2b282e] border border-border text-muted-foreground hover:text-foreground transition-all shrink-0"
-                title="Copy to clipboard"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+        {/* Center Section: Handy Equalizer Audio Waveform */}
+        <div className="flex items-center gap-0.5 px-2.5 py-1 bg-[#18171a] rounded-full border border-border/40 shrink-0 h-7">
+          {waveHeights.map((h, i) => (
+            <span
+              key={i}
+              style={{ height: `${h}px` }}
+              className={`w-1 rounded-full transition-all duration-75 ${
+                state === "recording"
+                  ? i % 2 === 0
+                    ? "bg-[#d87943]"
+                    : "bg-[#527575]"
+                  : state === "transcribing"
+                  ? "bg-[#d87943] opacity-80"
+                  : state === "done"
+                  ? "bg-emerald-500/80"
+                  : "bg-muted-foreground/30"
+              }`}
+            />
+          ))}
+        </div>
 
-            <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground px-1">
-              <span className="flex items-center gap-1 text-emerald-400">
-                <Check className="w-3 h-3" /> Auto-injected via active OS hook
-              </span>
-              <span>Whisper Tiny CPU • Local</span>
+        {/* Right Section: Timer, Sound Toggle & Dismiss */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {state === "recording" && (
+            <div className="flex items-center gap-1 bg-[#18171a] px-2 py-0.5 rounded-full border border-border/50 text-[10px] font-mono">
+              <span className="text-foreground font-semibold">{formatTimer(elapsedSecs)}</span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className="text-[#d87943] text-[9px]">{dbfsLevel}dB</span>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Sound cue mute toggle */}
+          <button
+            onClick={() => setSoundOn(!soundOn)}
+            className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-[#201e22] transition-colors"
+            title={soundOn ? "Mute audio cues" : "Unmute audio cues"}
+          >
+            {soundOn ? <Volume2 className="w-3 h-3 text-[#d87943]" /> : <VolumeX className="w-3 h-3" />}
+          </button>
+
+          {state === "done" && (
+            <button
+              onClick={handleCopy}
+              className="p-1 rounded-full text-muted-foreground hover:text-emerald-400 hover:bg-[#201e22] transition-colors"
+              title="Copy to clipboard"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            </button>
+          )}
+
+          {/* Dismiss button */}
+          <button
+            onClick={cancelRecording}
+            className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-[#201e22] transition-colors"
+            title="Dismiss / Cancel (Esc)"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

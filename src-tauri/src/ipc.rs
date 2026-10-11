@@ -2,6 +2,7 @@ use crate::state::AppState;
 use airctrl_core::events::DomainEvent;
 use airctrl_core::types::{ActionCommand, SnapDirection};
 use airctrl_meetings::MeetingDetector;
+use airctrl_stt::{ActiveWindowTextInjector, InjectionStatus};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -70,9 +71,41 @@ impl IpcBridge {
 
             "stopRecording" => {
                 let text = self.state.stop_recording().map_err(IpcError::ExecutionFailed)?;
+                let auto_inject = args
+                    .get("auto_inject")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+
+                let injection_info = if auto_inject && !text.is_empty() {
+                    let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
+                    let injector = ActiveWindowTextInjector::new(
+                        platform.window,
+                        platform.input,
+                        None,
+                    );
+                    let inject_fut = injector.inject(&text, None);
+                    match tokio::runtime::Handle::try_current() {
+                        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(inject_fut)),
+                        Err(_) => {
+                            let rt = tokio::runtime::Runtime::new().ok();
+                            if let Some(r) = rt {
+                                r.block_on(inject_fut)
+                            } else {
+                                Err(airctrl_stt::SttError::InferenceError("Failed to spawn runtime".into()))
+                            }
+                        }
+                    }.ok().map(|rep| json!({
+                        "status": format!("{:?}", rep.status),
+                        "method": format!("{:?}", rep.method)
+                    }))
+                } else {
+                    None
+                };
+
                 Ok(json!({
                     "status": "TranscriptionReady",
-                    "text": text
+                    "text": text,
+                    "injected": injection_info
                 }))
             }
 
@@ -243,6 +276,34 @@ impl IpcBridge {
                     .command_palette_visible
                     .store(next, std::sync::atomic::Ordering::SeqCst);
                 Ok(json!({ "command_palette_visible": next }))
+            }
+
+            "injectText" => {
+                let text = args
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
+                let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
+                let injector = ActiveWindowTextInjector::new(
+                    platform.window,
+                    platform.input,
+                    None,
+                );
+                let inject_fut = injector.inject(text, None);
+                let report = match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => tokio::task::block_in_place(|| handle.block_on(inject_fut)),
+                    Err(_) => {
+                        let rt = tokio::runtime::Runtime::new().map_err(|e| IpcError::ExecutionFailed(e.to_string()))?;
+                        rt.block_on(inject_fut)
+                    }
+                }.map_err(|e| IpcError::ExecutionFailed(e.to_string()))?;
+
+                Ok(json!({
+                    "success": report.status == InjectionStatus::Success,
+                    "status": format!("{:?}", report.status),
+                    "method": format!("{:?}", report.method),
+                    "text_length": report.text_length
+                }))
             }
 
             "getSettings" => {

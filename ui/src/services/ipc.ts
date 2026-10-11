@@ -42,4 +42,5 @@ export const tauriApi = {
   getCatalogedApps: () => invokeCommand<{ apps: import("../types/config").ApplicationItem[] }>("getCatalogedApps"),
   refreshCatalogedApps: () => invokeCommand<{ apps: import("../types/config").ApplicationItem[] }>("refreshCatalogedApps"),
   launchApp: (path: string) => invokeCommand<{ success: boolean; pid: number }>("launchApp", { path }),
+  injectText: (text: string) => invokeCommand<{ success: boolean; text_length: number }>("injectText", { text }),
 };

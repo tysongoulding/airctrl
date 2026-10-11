@@ -158,3 +158,70 @@ fn test_toggle_mode_complete_flow() {
     sm.on_key_down(3000, Some(42));
     assert_eq!(*sm.state(), SpeechState::Transcribing);
 }
+
+#[test]
+fn test_smart_dual_mode_hold_and_tap_flow() {
+    let mut sm = HotkeyStateMachine::new(HotkeyMode::SmartDual, None);
+
+    // Initial state
+    assert_eq!(*sm.state(), SpeechState::Idle);
+
+    // Scenario A: Push-to-Talk Hold (held >= 250ms)
+    sm.on_key_down(1000, Some(101));
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // Key up after 300ms (held >= 250ms) -> transitions to Transcribing
+    let res = sm.on_key_up(1300);
+    assert!(matches!(
+        res,
+        StateTransitionResult::Transitioned {
+            to: SpeechState::Transcribing,
+            action: StateMachineAction::StopRecordingAndTranscribe,
+            ..
+        }
+    ));
+    assert_eq!(*sm.state(), SpeechState::Transcribing);
+
+    // Reset back to Idle
+    sm.reset();
+    assert_eq!(*sm.state(), SpeechState::Idle);
+
+    // Scenario B: Quick Tap (< 250ms, >= 30ms) -> latches into Toggle Listening
+    sm.on_key_down(2000, Some(102));
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // Released after 80ms -> remains Listening!
+    let res = sm.on_key_up(2080);
+    assert_eq!(res, StateTransitionResult::NoChange);
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // User taps again at 3500ms -> stops and transcribes!
+    let res = sm.on_key_down(3500, Some(102));
+    assert!(matches!(
+        res,
+        StateTransitionResult::Transitioned {
+            to: SpeechState::Transcribing,
+            action: StateMachineAction::StopRecordingAndTranscribe,
+            ..
+        }
+    ));
+    assert_eq!(*sm.state(), SpeechState::Transcribing);
+
+    // Reset back to Idle
+    sm.reset();
+
+    // Scenario C: Cancel via Esc
+    sm.on_key_down(4000, Some(103));
+    assert_eq!(*sm.state(), SpeechState::Listening);
+    let res = sm.cancel();
+    assert!(matches!(
+        res,
+        StateTransitionResult::Transitioned {
+            to: SpeechState::Idle,
+            action: StateMachineAction::CancelRecordingDiscardBuffer,
+            ..
+        }
+    ));
+    assert_eq!(*sm.state(), SpeechState::Idle);
+}
+

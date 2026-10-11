@@ -133,6 +133,37 @@ impl HotkeyStateMachine {
                 }
                 _ => StateTransitionResult::NoChange,
             },
+            HotkeyMode::SmartDual => match self.state {
+                SpeechState::Idle => {
+                    let from = self.state.clone();
+                    let to = SpeechState::Listening;
+                    self.state = to.clone();
+                    self.press_start_time_ms = timestamp_ms;
+                    self.target_window_id = active_window_id;
+                    self.publish_state_changed(&to);
+
+                    StateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        action: StateMachineAction::StartRecording {
+                            target_window_id: active_window_id,
+                        },
+                    }
+                }
+                SpeechState::Listening => {
+                    let from = self.state.clone();
+                    let to = SpeechState::Transcribing;
+                    self.state = to.clone();
+                    self.publish_state_changed(&to);
+
+                    StateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        action: StateMachineAction::StopRecordingAndTranscribe,
+                    }
+                }
+                _ => StateTransitionResult::NoChange,
+            },
         }
     }
 
@@ -173,6 +204,61 @@ impl HotkeyStateMachine {
                 }
             }
             HotkeyMode::Toggle => StateTransitionResult::NoChange,
+            HotkeyMode::SmartDual => {
+                if self.state == SpeechState::Listening {
+                    let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
+                    if duration >= 250 {
+                        // Push-to-Talk hold (>= 250ms): release to finish and transcribe
+                        let from = self.state.clone();
+                        let to = SpeechState::Transcribing;
+                        self.state = to.clone();
+                        self.publish_state_changed(&to);
+
+                        StateTransitionResult::Transitioned {
+                            from,
+                            to,
+                            action: StateMachineAction::StopRecordingAndTranscribe,
+                        }
+                    } else if duration < 30 {
+                        // Accidental flutter (<30ms): discard and return to Idle
+                        let from = self.state.clone();
+                        let to = SpeechState::Idle;
+                        self.state = to.clone();
+                        self.target_window_id = None;
+                        self.publish_state_changed(&to);
+
+                        StateTransitionResult::Transitioned {
+                            from,
+                            to,
+                            action: StateMachineAction::CancelRecordingDiscardBuffer,
+                        }
+                    } else {
+                        // Quick tap (< 250ms): latched into toggle mode, stay listening!
+                        StateTransitionResult::NoChange
+                    }
+                } else {
+                    StateTransitionResult::NoChange
+                }
+            }
+        }
+    }
+
+    /// Cancels active recording/transcription immediately and returns to Idle.
+    pub fn cancel(&mut self) -> StateTransitionResult {
+        if self.state != SpeechState::Idle {
+            let from = self.state.clone();
+            let to = SpeechState::Idle;
+            self.state = to.clone();
+            self.target_window_id = None;
+            self.publish_state_changed(&to);
+
+            StateTransitionResult::Transitioned {
+                from,
+                to,
+                action: StateMachineAction::CancelRecordingDiscardBuffer,
+            }
+        } else {
+            StateTransitionResult::NoChange
         }
     }
 

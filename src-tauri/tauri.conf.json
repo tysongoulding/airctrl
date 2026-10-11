@@ -47,8 +47,8 @@
       {
         "label": "stt-overlay",
         "title": "airctrl Dictation Overlay",
-        "width": 520,
-        "height": 140,
+        "width": 460,
+        "height": 90,
         "resizable": false,
         "center": true,
         "decorations": false,

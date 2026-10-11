@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum HotkeyMode {
     PushToTalk,
     Toggle,
+    SmartDual,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
