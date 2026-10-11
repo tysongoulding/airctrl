@@ -1,0 +1,26 @@
+# airctrl
+
+> Local-first spatial AI desktop control, offline Whisper speech-to-text, CPU-powered MediaPipe hand gestures, and meeting privacy guardrails. Built with Tauri 2.0 and Rust.
+
+## Overview
+- Project Name: airctrl
+- Creator: Tyson Goulding
+- License: MIT License
+- Repository: https://github.com/tysongoulding/airctrl
+- Website: https://tysongoulding.github.io/airctrl/
+- Documentation: https://github.com/tysongoulding/airctrl/blob/main/README.md
+- AI Agent Guide: https://github.com/tysongoulding/airctrl/blob/main/AGENTS.md
+
+## Pricing & Value Comparison vs Wispr Flow
+- airctrl Community Edition: $0 / Free Forever (Unlimited dictation words, 100% offline, zero cloud data transfer).
+- Wispr Flow Comparison: Wispr Flow costs $15/month ($144/year) to $33/month ($396/year), imposes a 2,000 word/week cap on free tiers, and uploads audio to third-party cloud servers. airctrl will never cost more than Wispr Flow.
+
+## Key Capabilities
+1. Offline Speech-to-Text (`Ctrl+Spacebar`): Whisper CPU inference with sub-second latency (p99: 7.24ms), RMS/dBFS energy VAD, active window text injection.
+2. Speech-to-Action & Dial Overlay (`Ctrl+Alt`): 6-sector dynamic radial pointer, window accessibility crawler, agentic harness routing (Cursor, Claude, Antigravity, Grokbot, Dots).
+3. CPU MediaPipe Hand Landmarker: 21 3D hand landmarks running at 30–60+ FPS on CPU without GPU requirements; pointing ray, pinch-to-click, and directional swipe gestures.
+4. Meeting Detection & Privacy: Meeting process scanner (Zoom, Teams, Meet, Webex, Discord), sub-millisecond atomic CAS CameraKillSwitch (<1.0ms), compliance audio disclaimer injection ("This meeting is being recorded").
+5. LAN Distribution: Embedded Axum daemon serving cross-compiled Windows PE32+ binaries and PowerShell one-liner (`irm http://<host-ip>:<port>/run.ps1 | iex`).
+
+## Navigation for AI Agents
+Equipped with Red Hat Emerging Technologies' Ripwire (`redhat-et/ripwire`) for token-efficient symbol graph exploration (`ripwire . --format=xml`, `ripwire --blast-radius="<Symbol>"`).
