@@ -6,11 +6,10 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
-  base: "./",
   server: {
     port: 1420,
     strictPort: true,
-    host: "0.0.0.0",
+    host: "127.0.0.1",
     watch: {
       ignored: ["**/src-tauri/**"],
     },

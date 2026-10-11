@@ -8,9 +8,10 @@ import { tauriApi } from "../../services/ipc";
 
 interface RadialDialProps {
   onAction?: (command: string) => void;
+  initialVisible?: boolean;
 }
 
-export const RadialDial: React.FC<RadialDialProps> = ({ onAction }) => {
+export const RadialDial: React.FC<RadialDialProps> = ({ onAction, initialVisible = true }) => {
   const {
     isVisible,
     activeSector,
@@ -31,7 +32,7 @@ export const RadialDial: React.FC<RadialDialProps> = ({ onAction }) => {
         onAction(sector.actionCommand);
       }
     }
-  });
+  }, initialVisible);
 
   // Global hotkey and keyboard navigation listener
   useEffect(() => {

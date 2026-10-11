@@ -5,7 +5,7 @@
   "identifier": "com.tysongoulding.airctrl",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../ui/dist"
   },
@@ -24,8 +24,8 @@
         "decorations": true,
         "transparent": false,
         "backgroundColor": "#121113",
-        "visible": true,
-        "url": "index.html"
+        "devtools": true,
+        "visible": true
       },
       {
         "label": "radial-overlay",
@@ -40,6 +40,7 @@
         "skipTaskbar": true,
         "shadow": false,
         "visible": false,
+        "devtools": true,
         "url": "index.html#dial"
       }
     ],

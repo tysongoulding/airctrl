@@ -11,8 +11,11 @@ export interface RadialPointerUpdate {
   isSelected: boolean;
 }
 
-export function useRadialState(onActionExecute?: (sectorId: number) => void) {
-  const [isVisible, setIsVisible] = useState<boolean>(false);
+export function useRadialState(
+  onActionExecute?: (sectorId: number) => void,
+  initialVisible: boolean = false
+) {
+  const [isVisible, setIsVisible] = useState<boolean>(initialVisible);
   const [activeSector, setActiveSector] = useState<number | null>(null);
   const [inDeadzone, setInDeadzone] = useState<boolean>(true);
   const [pointerPos, setPointerPos] = useState<{ x: number | null; y: number | null }>({
