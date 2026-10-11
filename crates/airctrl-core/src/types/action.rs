@@ -8,6 +8,7 @@ pub enum SnapDirection {
     Top,
     Bottom,
     Maximize,
+    Center,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -72,6 +73,8 @@ pub enum ActionCommand {
     WindowMinimize { window_id: u64 },
     WindowSnap { direction: SnapDirection },
     LaunchApp { app_name: String },
+    CloseApp { app_name: String },
+    CenterApp { app_name: String },
     AgentDispatch(AgentPayload),
     ReaInspect { target_pid: u32, binary_path: Option<String> },
     RadialDialToggle {},

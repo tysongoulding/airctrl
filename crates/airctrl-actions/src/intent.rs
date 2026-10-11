@@ -7,6 +7,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ActionIntent {
     LaunchApp,
+    CloseApp,
+    CenterApp,
     FocusWindow,
     WindowSnap,
     WindowMinimize,

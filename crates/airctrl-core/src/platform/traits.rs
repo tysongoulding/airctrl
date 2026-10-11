@@ -19,6 +19,12 @@ pub trait PlatformWindowOps: Send + Sync {
     /// Requests graceful closure of the target window.
     fn close_window(&self, id: u64) -> Result<(), CoreError>;
 
+    /// Centers the target window on the display work area.
+    fn center_window(&self, id: u64) -> Result<(), CoreError> {
+        let _ = id;
+        Ok(())
+    }
+
     /// Extended enumeration returning comprehensive WindowDetails (default implementation).
     fn enumerate_window_details(&self) -> Result<Vec<WindowDetails>, CoreError> {
         let windows = self.enumerate_windows()?;

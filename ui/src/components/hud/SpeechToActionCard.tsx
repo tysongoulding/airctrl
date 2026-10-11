@@ -1,8 +1,21 @@
 import React, { useState } from "react";
-import { Zap, Bot, Terminal, Play, Sparkles, Cpu } from "lucide-react";
+import {
+  Zap,
+  Bot,
+  Terminal,
+  Play,
+  Sparkles,
+  Cpu,
+  Search,
+  Maximize2,
+  Minimize2,
+  Layout,
+  ExternalLink,
+} from "lucide-react";
 import { SettingsState, ApplicationItem } from "../../types/config";
 import { tauriApi } from "../../services/ipc";
 import { AppCatalogCard } from "./AppCatalogCard";
+import { CenterSearchBar } from "../actions/CenterSearchBar";
 
 interface Props {
   settings: SettingsState;
@@ -18,13 +31,21 @@ const AGENTS = [
 ];
 
 export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssignToSector }) => {
-  const [testCommand, setTestCommand] = useState("Focus Cursor");
+  const [testCommand, setTestCommand] = useState("open slack");
   const [dispatching, setDispatching] = useState(false);
   const [dispatchResult, setDispatchResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [subView, setSubView] = useState<"agents" | "catalog">("agents");
+  const [subView, setSubView] = useState<"palette" | "agents" | "catalog">("palette");
 
   const hotkeySta = settings.hotkey_sta || "Ctrl+Shift+Space";
   const selectedAgent = settings.sta_agent_target || "cursor";
+
+  const handleLaunchCommandPalette = async () => {
+    try {
+      await tauriApi.toggleCommandPalette();
+    } catch (err) {
+      console.warn("Could not toggle command palette:", err);
+    }
+  };
 
   const handleTestDispatch = async (cmdToRun?: string) => {
     const cmd = cmdToRun || testCommand;
@@ -66,19 +87,29 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
             </div>
             <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                Speech-to-Action (STA) Engine
+                Speech-to-Command (STC) & Search
                 <span className="px-2 py-0.5 text-[10px] rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-mono">
                   Router Active
                 </span>
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Semantic voice command parser, autonomous AI agent dispatch, and OS window crawler
+                Spotlight application search, parameter-first window control [open, close, center], and autonomous agent dispatch
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border">
+              <button
+                onClick={() => setSubView("palette")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  subView === "palette"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Center Search & Parameters
+              </button>
               <button
                 onClick={() => setSubView("agents")}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
@@ -103,7 +134,153 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
           </div>
         </div>
 
-        {subView === "agents" ? (
+        {subView === "palette" ? (
+          <div className="flex flex-col gap-6">
+            {/* Spotlight Desktop Launcher Card */}
+            <div className="p-4 rounded-xl border border-border bg-[#18171a]/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#d87943]/20 border border-[#d87943]/40 flex items-center justify-center text-[#d87943] shrink-0">
+                  <Search className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    Spotlight Center Search Palette
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#d87943]/20 text-[#d87943] border border-[#d87943]/30">
+                      {hotkeySta}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Opens a central floating search bar to search installed apps or speak voice commands
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleLaunchCommandPalette}
+                  className="px-4 py-2 rounded-xl bg-[#d87943] hover:bg-[#c46835] text-white text-xs font-semibold shadow-md shadow-[#d87943]/20 flex items-center gap-2 transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Launch Desktop Search Bar
+                </button>
+              </div>
+            </div>
+
+            {/* Parameter-First Command Syntax Guide */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* [open] {application} */}
+              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#d87943]/20 text-[#d87943] border border-[#d87943]/40">
+                      [open]
+                    </span>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#d87943]" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-foreground">Open & Center Application</h4>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Launches app and centers its window. If already open, brings to foreground and centers it.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-[#d87943]">open slack</code>
+                  <button
+                    onClick={() => {
+                      setTestCommand("open slack");
+                      handleTestDispatch("open slack");
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-[#d87943] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                  >
+                    Test
+                  </button>
+                </div>
+              </div>
+
+              {/* [close] {application} */}
+              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                      [close]
+                    </span>
+                    <Minimize2 className="w-3.5 h-3.5 text-rose-400" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-foreground">Close Application</h4>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Finds the running window or process matching the application name and gracefully closes it.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-rose-400">close slack</code>
+                  <button
+                    onClick={() => {
+                      setTestCommand("close slack");
+                      handleTestDispatch("close slack");
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-rose-600 hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                  >
+                    Test
+                  </button>
+                </div>
+              </div>
+
+              {/* [center] {application} */}
+              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#527575]/25 text-[#527575] border border-[#527575]/50">
+                      [center]
+                    </span>
+                    <Layout className="w-3.5 h-3.5 text-[#527575]" />
+                  </div>
+                  <h4 className="text-xs font-semibold text-foreground">Center Window</h4>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Repositions window to the center of the display work area, preserving current dimensions.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-[#527575]">center slack</code>
+                  <button
+                    onClick={() => {
+                      setTestCommand("center slack");
+                      handleTestDispatch("center slack");
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-[#527575] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                  >
+                    Test
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dispatch Result Notice */}
+            {dispatchResult && (
+              <div
+                className={`p-3 rounded-xl border text-xs font-mono transition-all ${
+                  dispatchResult.success
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-500"
+                }`}
+              >
+                {dispatchResult.message}
+              </div>
+            )}
+
+            {/* Embedded Live Search Bar Tester */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#d87943]" /> Live Interactive Search Bar Preview
+                </span>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  Test search, parameter chips & mic dictation directly in HUD
+                </span>
+              </div>
+              <div className="rounded-2xl border border-border bg-[#121113] p-2">
+                <CenterSearchBar standalone={false} />
+              </div>
+            </div>
+          </div>
+        ) : subView === "agents" ? (
           <>
             {/* Keybinds & Intent Parser Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

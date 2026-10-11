@@ -59,6 +59,22 @@
         "visible": false,
         "devtools": true,
         "url": "index.html#stt-overlay"
+      },
+      {
+        "label": "command-palette",
+        "title": "airctrl Command Palette",
+        "width": 640,
+        "height": 420,
+        "resizable": false,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "visible": false,
+        "devtools": true,
+        "url": "index.html#command-palette"
       }
     ],
     "trayIcon": {

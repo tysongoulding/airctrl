@@ -113,6 +113,35 @@ impl PlatformWindowOps for MockWindowOps {
             Err(CoreError::WindowNotFound(id))
         }
     }
+
+    fn center_window(&self, id: u64) -> Result<(), CoreError> {
+        let mut state = self.state.write().unwrap();
+        if let Some(w) = state.windows.iter_mut().find(|w| w.id == id) {
+            let screen_w = 1920;
+            let screen_h = 1080;
+            let win_w = if w.bounds.width > 0 && w.bounds.width < screen_w {
+                w.bounds.width
+            } else {
+                (screen_w * 7) / 10
+            };
+            let win_h = if w.bounds.height > 0 && w.bounds.height < screen_h {
+                w.bounds.height
+            } else {
+                (screen_h * 8) / 10
+            };
+            w.bounds.width = win_w;
+            w.bounds.height = win_h;
+            w.bounds.x = ((screen_w - win_w) / 2) as i32;
+            w.bounds.y = ((screen_h - win_h) / 2) as i32;
+            w.is_focused = true;
+            w.is_minimized = false;
+            let updated = w.clone();
+            state.active_window = Some(updated);
+            Ok(())
+        } else {
+            Err(CoreError::WindowNotFound(id))
+        }
+    }
 }
 
 #[derive(Debug, Default)]

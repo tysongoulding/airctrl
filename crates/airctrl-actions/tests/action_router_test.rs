@@ -181,3 +181,32 @@ fn test_radial_dial_and_rea_inspect() {
         }
     );
 }
+
+#[test]
+fn test_parameter_first_open_close_center() {
+    // Open application
+    let cmd_open = parse_voice_command("open slack");
+    assert_eq!(cmd_open, ActionCommand::LaunchApp { app_name: "slack".to_string() });
+
+    // Close application
+    let cmd_close_app = parse_voice_command("close slack");
+    assert_eq!(cmd_close_app, ActionCommand::CloseApp { app_name: "slack".to_string() });
+
+    let cmd_quit_app = parse_voice_command("quit spotify");
+    assert_eq!(cmd_quit_app, ActionCommand::CloseApp { app_name: "spotify".to_string() });
+
+    // Center application
+    let cmd_center_app = parse_voice_command("center slack");
+    assert_eq!(cmd_center_app, ActionCommand::CenterApp { app_name: "slack".to_string() });
+
+    // Center window standalone
+    let cmd_center_win = parse_voice_command("center window");
+    assert_eq!(cmd_center_win, ActionCommand::WindowSnap { direction: SnapDirection::Center });
+
+    let cmd_center = parse_voice_command("center");
+    assert_eq!(cmd_center, ActionCommand::WindowSnap { direction: SnapDirection::Center });
+
+    let cmd_snap_center = parse_voice_command("snap center");
+    assert_eq!(cmd_snap_center, ActionCommand::WindowSnap { direction: SnapDirection::Center });
+}
+

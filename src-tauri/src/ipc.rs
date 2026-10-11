@@ -101,9 +101,13 @@ impl IpcBridge {
                                     "right" => SnapDirection::Right,
                                     "top" => SnapDirection::Top,
                                     "bottom" => SnapDirection::Bottom,
+                                    "center" => SnapDirection::Center,
                                     _ => SnapDirection::Maximize,
                                 };
                                 ActionCommand::WindowSnap { direction }
+                            }
+                            "center" | "centerwindow" => {
+                                ActionCommand::WindowSnap { direction: SnapDirection::Center }
                             }
                             "radialdialtoggle" | "toggledial" | "dial" => {
                                 ActionCommand::RadialDialToggle {}
@@ -116,8 +120,86 @@ impl IpcBridge {
                     cmd => cmd,
                 };
 
-                if let ActionCommand::RadialDialToggle {} = &command {
-                    self.state.dial_overlay.write().toggle();
+                let mut execution_info = json!({
+                    "command": command,
+                    "dispatched": true
+                });
+
+                match &command {
+                    ActionCommand::RadialDialToggle {} => {
+                        self.state.dial_overlay.write().toggle();
+                    }
+                    ActionCommand::LaunchApp { app_name } => {
+                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                        let platform = airctrl_core::platform::create_platform_provider(false);
+                        let norm = app_name.to_lowercase();
+                        if let Some(win) = running.iter().find(|w| {
+                            w.process_name.to_lowercase().contains(&norm)
+                                || w.title.to_lowercase().contains(&norm)
+                        }) {
+                            let _ = platform.window.focus_window(win.id);
+                            let _ = platform.window.center_window(win.id);
+                            execution_info = json!({
+                                "command": command,
+                                "dispatched": true,
+                                "action_taken": "focused_and_centered",
+                                "window_id": win.id
+                            });
+                        } else {
+                            let pid = airctrl_actions::launch_application(app_name).ok();
+                            execution_info = json!({
+                                "command": command,
+                                "dispatched": true,
+                                "action_taken": "launched",
+                                "pid": pid
+                            });
+                        }
+                    }
+                    ActionCommand::CloseApp { app_name } => {
+                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                        let platform = airctrl_core::platform::create_platform_provider(false);
+                        let norm = app_name.to_lowercase();
+                        let mut closed = 0;
+                        for win in running.iter().filter(|w| {
+                            w.process_name.to_lowercase().contains(&norm)
+                                || w.title.to_lowercase().contains(&norm)
+                        }) {
+                            if platform.window.close_window(win.id).is_ok() {
+                                closed += 1;
+                            }
+                        }
+                        execution_info = json!({
+                            "command": command,
+                            "dispatched": true,
+                            "action_taken": "closed",
+                            "closed_count": closed
+                        });
+                    }
+                    ActionCommand::CenterApp { app_name } => {
+                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                        let platform = airctrl_core::platform::create_platform_provider(false);
+                        let norm = app_name.to_lowercase();
+                        if let Some(win) = running.iter().find(|w| {
+                            w.process_name.to_lowercase().contains(&norm)
+                                || w.title.to_lowercase().contains(&norm)
+                        }) {
+                            let _ = platform.window.focus_window(win.id);
+                            let _ = platform.window.center_window(win.id);
+                            execution_info = json!({
+                                "command": command,
+                                "dispatched": true,
+                                "action_taken": "centered",
+                                "window_id": win.id
+                            });
+                        }
+                    }
+                    ActionCommand::WindowSnap { direction: SnapDirection::Center } => {
+                        let platform = airctrl_core::platform::create_platform_provider(false);
+                        if let Ok(active) = platform.window.get_active_window() {
+                            let _ = platform.window.center_window(active.id);
+                        }
+                    }
+                    _ => {}
                 }
 
                 let _ = self
@@ -128,10 +210,7 @@ impl IpcBridge {
                 Ok(json!({
                     "success": true,
                     "action": action_val,
-                    "execution": {
-                        "command": command,
-                        "dispatched": true
-                    }
+                    "execution": execution_info
                 }))
             }
 
@@ -152,6 +231,18 @@ impl IpcBridge {
                     .stt_overlay_visible
                     .store(next, std::sync::atomic::Ordering::SeqCst);
                 Ok(json!({ "stt_overlay_visible": next }))
+            }
+
+            "toggleCommandPalette" => {
+                let current = self
+                    .state
+                    .command_palette_visible
+                    .load(std::sync::atomic::Ordering::SeqCst);
+                let next = !current;
+                self.state
+                    .command_palette_visible
+                    .store(next, std::sync::atomic::Ordering::SeqCst);
+                Ok(json!({ "command_palette_visible": next }))
             }
 
             "getSettings" => {

@@ -23,6 +23,7 @@ pub struct AppState {
     pub event_bus: EventBus,
     pub cataloged_apps: RwLock<Vec<airctrl_core::types::ApplicationItem>>,
     pub stt_overlay_visible: AtomicBool,
+    pub command_palette_visible: AtomicBool,
 }
 
 impl Default for AppState {
@@ -63,6 +64,7 @@ impl AppState {
             event_bus,
             cataloged_apps,
             stt_overlay_visible: AtomicBool::new(false),
+            command_palette_visible: AtomicBool::new(false),
         }
     }
 

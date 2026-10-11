@@ -9,6 +9,7 @@ export class MockTauriIpcBridge {
     triggerAction: (args: any) => ({ success: true, action: args?.action ?? "WindowSnap" }),
     toggleRadialDial: () => ({ dial_visible: true }),
     toggleSttOverlay: () => ({ stt_overlay_visible: true }),
+    toggleCommandPalette: () => ({ command_palette_visible: true }),
     getSettings: () => ({
       hotkey_stt: "Ctrl+Spacebar",
       hotkey_dial: "Ctrl+Alt",

@@ -421,4 +421,44 @@ fn test_ipc_toggle_stt_overlay() {
     assert_eq!(res2["stt_overlay_visible"], false);
 }
 
+#[test]
+fn test_ipc_toggle_command_palette() {
+    let bridge = IpcBridge::default();
+
+    let res1 = bridge.invoke("toggleCommandPalette", None).expect("toggleCommandPalette failed");
+    assert_eq!(res1["command_palette_visible"], true);
+
+    let res2 = bridge.invoke("toggleCommandPalette", None).expect("toggleCommandPalette failed");
+    assert_eq!(res2["command_palette_visible"], false);
+}
+
+#[test]
+fn test_ipc_trigger_action_parameter_first() {
+    let bridge = IpcBridge::default();
+
+    // 1. open slack
+    let res_open = bridge
+        .invoke("triggerAction", Some(json!({ "action": "open slack" })))
+        .expect("triggerAction open slack failed");
+    assert_eq!(res_open["success"], true);
+
+    // 2. close slack
+    let res_close = bridge
+        .invoke("triggerAction", Some(json!({ "action": "close slack" })))
+        .expect("triggerAction close slack failed");
+    assert_eq!(res_close["success"], true);
+
+    // 3. center slack
+    let res_center = bridge
+        .invoke("triggerAction", Some(json!({ "action": "center slack" })))
+        .expect("triggerAction center slack failed");
+    assert_eq!(res_center["success"], true);
+
+    // 4. center window
+    let res_win_center = bridge
+        .invoke("triggerAction", Some(json!({ "action": "center window" })))
+        .expect("triggerAction center window failed");
+    assert_eq!(res_win_center["success"], true);
+}
+
 

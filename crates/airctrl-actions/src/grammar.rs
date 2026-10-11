@@ -4,11 +4,15 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 static SNAP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:snap|dock|tile)(?:\s+window)?\s+(left|right|top|bottom|maximize)$").unwrap()
+    Regex::new(r"(?i)^(?:snap|dock|tile)(?:\s+window)?\s+(left|right|top|bottom|maximize|center)$").unwrap()
 });
 
 static MAXIMIZE_STANDALONE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(?:dock\s+)?maximize(?:\s+(?:window|current|this))?$").unwrap()
+});
+
+static CENTER_STANDALONE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:dock\s+)?center(?:\s+(?:window|current(?:\s+window)?|this(?:\s+window)?))?$").unwrap()
 });
 
 static FOCUS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
@@ -17,6 +21,14 @@ static FOCUS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 
 static CLOSE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(?:close|quit|exit|kill)\s+(?:window|current(?:\s+window)?|this(?:\s+window)?)$").unwrap()
+});
+
+static CLOSE_APP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:close|quit|exit|kill)\s+(.+)$").unwrap()
+});
+
+static CENTER_APP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:center|centre)\s+(.+)$").unwrap()
 });
 
 static MINIMIZE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
@@ -110,6 +122,7 @@ impl VoiceCommandGrammar {
                 "top" => SnapDirection::Top,
                 "bottom" => SnapDirection::Bottom,
                 "maximize" => SnapDirection::Maximize,
+                "center" => SnapDirection::Center,
                 _ => SnapDirection::Maximize,
             };
             return ParsedIntent {
@@ -140,8 +153,23 @@ impl VoiceCommandGrammar {
             };
         }
 
-        // 3. Window Close
-        if CLOSE_REGEX.is_match(trimmed) || normalized == "close window" || normalized == "close current" {
+        // 2c. Standalone Center
+        if CENTER_STANDALONE_REGEX.is_match(trimmed) || normalized == "center" || normalized == "centre" {
+            return ParsedIntent {
+                intent: ActionIntent::WindowSnap,
+                confidence: 1.0,
+                slots: ExtractedSlots {
+                    verb: Some("center".to_string()),
+                    direction: Some(SnapDirection::Center),
+                    ..Default::default()
+                },
+                raw_utterance: raw.to_string(),
+                normalized_utterance: normalized,
+            };
+        }
+
+        // 3. Window Close (generic current window)
+        if CLOSE_REGEX.is_match(trimmed) || normalized == "close window" || normalized == "close current" || normalized == "close this" {
             return ParsedIntent {
                 intent: ActionIntent::WindowClose,
                 confidence: 1.0,
@@ -153,6 +181,42 @@ impl VoiceCommandGrammar {
                 raw_utterance: raw.to_string(),
                 normalized_utterance: normalized,
             };
+        }
+
+        // 3b. Center Application ([center] {application}, e.g. "center slack")
+        if let Some(caps) = CENTER_APP_REGEX.captures(trimmed) {
+            let app_name = caps.get(1).map_or("", |m| m.as_str()).trim();
+            if !app_name.is_empty() && app_name != "window" && app_name != "current" && app_name != "this" {
+                return ParsedIntent {
+                    intent: ActionIntent::CenterApp,
+                    confidence: 0.95,
+                    slots: ExtractedSlots {
+                        verb: Some("center".to_string()),
+                        target: Some(app_name.to_lowercase()),
+                        ..Default::default()
+                    },
+                    raw_utterance: raw.to_string(),
+                    normalized_utterance: normalized,
+                };
+            }
+        }
+
+        // 3c. Close Application ([close] {application}, e.g. "close slack")
+        if let Some(caps) = CLOSE_APP_REGEX.captures(trimmed) {
+            let app_name = caps.get(1).map_or("", |m| m.as_str()).trim();
+            if !app_name.is_empty() && app_name != "window" && app_name != "current" && app_name != "this" {
+                return ParsedIntent {
+                    intent: ActionIntent::CloseApp,
+                    confidence: 0.95,
+                    slots: ExtractedSlots {
+                        verb: Some("close".to_string()),
+                        target: Some(app_name.to_lowercase()),
+                        ..Default::default()
+                    },
+                    raw_utterance: raw.to_string(),
+                    normalized_utterance: normalized,
+                };
+            }
         }
 
         // 4. Window Minimize

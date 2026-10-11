@@ -7,6 +7,7 @@ export interface ApplicationItem {
   path: string;
   icon?: string;
   category: string;
+  running?: boolean;
 }
 
 /**

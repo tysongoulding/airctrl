@@ -19,8 +19,17 @@ fn test_adversarial_action_command_serialization_invariants() {
         ActionCommand::WindowSnap {
             direction: SnapDirection::Left,
         },
+        ActionCommand::WindowSnap {
+            direction: SnapDirection::Center,
+        },
         ActionCommand::LaunchApp {
             app_name: "C:\\Program Files\\App\\app.exe".to_string(),
+        },
+        ActionCommand::CloseApp {
+            app_name: "slack".to_string(),
+        },
+        ActionCommand::CenterApp {
+            app_name: "slack".to_string(),
         },
         ActionCommand::AgentDispatch(AgentPayload {
             target: AgentTarget::Antigravity,

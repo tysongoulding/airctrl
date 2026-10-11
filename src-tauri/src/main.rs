@@ -35,6 +35,7 @@ fn main() {
             commands::get_cataloged_apps,
             commands::refresh_cataloged_apps,
             commands::launch_app,
+            commands::toggle_command_palette,
         ])
         .run(tauri::generate_context!())
         .expect("error while running airctrl tauri application");

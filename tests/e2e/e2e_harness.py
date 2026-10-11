@@ -713,7 +713,8 @@ class SemanticActionRouter:
         "right": "Right",
         "top": "Top",
         "bottom": "Bottom",
-        "maximize": "Maximize"
+        "maximize": "Maximize",
+        "center": "Center",
     }
 
     AGENT_TARGETS = {
@@ -732,11 +733,14 @@ class SemanticActionRouter:
         if not u:
             return {"type": "Unknown", "payload": {"query": ""}}
 
-        # Window Snap
-        snap_m = re.match(r"(?:snap|dock)\s+(left|right|top|bottom|maximize)", u)
+        # Window Snap / Center
+        snap_m = re.match(r"(?:snap|dock)\s+(left|right|top|bottom|maximize|center)", u)
         if snap_m:
             direction = self.SNAP_DIRECTIONS[snap_m.group(1)]
             return {"type": "WindowSnap", "payload": {"direction": direction}}
+
+        if u == "center" or u == "center window":
+            return {"type": "WindowSnap", "payload": {"direction": "Center"}}
 
         # Window Focus
         focus_m = re.match(r"(?:focus|switch to)\s+(.+)", u)
@@ -744,9 +748,18 @@ class SemanticActionRouter:
             target_name = focus_m.group(1).strip()
             return {"type": "WindowFocus", "payload": {"window_id": 101, "query": target_name}}
 
-        # Window Close
+        # Window Close / Close App
         if u.startswith("close window") or u.startswith("close current"):
             return {"type": "WindowClose", "payload": {"window_id": 101}}
+
+        close_app_m = re.match(r"(?:close|quit|exit|kill)\s+(.+)", u)
+        if close_app_m and close_app_m.group(1).strip() not in ("window", "current", "this"):
+            return {"type": "CloseApp", "payload": {"app_name": close_app_m.group(1).strip()}}
+
+        # Center App
+        center_app_m = re.match(r"(?:center|centre)\s+(.+)", u)
+        if center_app_m and center_app_m.group(1).strip() not in ("window", "current", "this"):
+            return {"type": "CenterApp", "payload": {"app_name": center_app_m.group(1).strip()}}
 
         # Window Minimize
         if u.startswith("minimize window") or u.startswith("minimize"):

@@ -116,6 +116,16 @@ impl SemanticCommandRouter {
                 ActionCommand::LaunchApp { app_name }
             }
 
+            ActionIntent::CloseApp => {
+                let app_name = parsed.slots.target.clone().unwrap_or_default();
+                ActionCommand::CloseApp { app_name }
+            }
+
+            ActionIntent::CenterApp => {
+                let app_name = parsed.slots.target.clone().unwrap_or_default();
+                ActionCommand::CenterApp { app_name }
+            }
+
             ActionIntent::AgentDispatch => {
                 let target = parsed.slots.agent.unwrap_or(AgentTarget::Claude);
                 let prompt = parsed.slots.payload.clone().unwrap_or_default();

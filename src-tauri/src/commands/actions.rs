@@ -39,3 +39,27 @@ pub async fn launch_app(
         .invoke("launchApp", Some(serde_json::json!({ "path": path })))
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn toggle_command_palette(
+    app: tauri::AppHandle,
+    bridge: State<'_, IpcBridge>,
+    args: Option<Value>,
+) -> Result<Value, String> {
+    let result = bridge
+        .invoke("toggleCommandPalette", args)
+        .map_err(|e| e.to_string())?;
+
+    if let Some(palette_window) = tauri::Manager::get_webview_window(&app, "command-palette") {
+        if let Some(visible) = result.get("command_palette_visible").and_then(Value::as_bool) {
+            if visible {
+                let _ = palette_window.show();
+                let _ = palette_window.set_focus();
+            } else {
+                let _ = palette_window.hide();
+            }
+        }
+    }
+
+    Ok(result)
+}
