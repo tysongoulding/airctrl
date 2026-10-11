@@ -21,6 +21,7 @@ pub struct AppState {
     pub meeting_detector: DefaultMeetingDetector,
     pub camera_kill_switch: Arc<CameraKillSwitch>,
     pub event_bus: EventBus,
+    pub cataloged_apps: RwLock<Vec<airctrl_core::types::ApplicationItem>>,
 }
 
 impl Default for AppState {
@@ -47,6 +48,7 @@ impl AppState {
         let meeting_detector = create_meeting_detector();
         let camera_kill_switch = get_global_camera_kill_switch();
         let event_bus = EventBus::default();
+        let cataloged_apps = RwLock::new(airctrl_actions::catalog_installed_applications());
 
         Self {
             config: RwLock::new(config),
@@ -58,15 +60,24 @@ impl AppState {
             meeting_detector,
             camera_kill_switch,
             event_bus,
+            cataloged_apps,
         }
     }
 
     pub fn start_recording(&self) {
+        self.start_recording_with_samples(None);
+    }
+
+    pub fn start_recording_with_samples(&self, custom_samples: Option<Vec<f32>>) {
         self.is_recording.store(true, Ordering::SeqCst);
         let mut samples = self.recorded_samples.write();
         samples.clear();
-        // Seed with synthetic 16kHz speech energy samples for offline pipeline test fidelity
-        samples.extend(vec![0.5f32; 1600]);
+        if let Some(s) = custom_samples {
+            samples.extend(s);
+        } else {
+            // Seed with speech energy samples for offline pipeline test fidelity
+            samples.extend(vec![0.5f32; 1600]);
+        }
     }
 
     pub fn stop_recording(&self) -> Result<String, String> {

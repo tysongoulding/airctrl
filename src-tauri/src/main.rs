@@ -21,6 +21,9 @@ fn main() {
             commands::update_settings,
             commands::get_meeting_status,
             commands::trigger_camera_kill_switch,
+            commands::get_cataloged_apps,
+            commands::refresh_cataloged_apps,
+            commands::launch_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running airctrl tauri application");

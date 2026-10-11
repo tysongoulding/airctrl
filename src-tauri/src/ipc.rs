@@ -56,7 +56,15 @@ impl IpcBridge {
 
         match trimmed {
             "startRecording" => {
-                self.state.start_recording();
+                let samples = args.get("samples").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter()
+                            .filter_map(Value::as_f64)
+                            .map(|f| f as f32)
+                            .collect::<Vec<f32>>()
+                    })
+                });
+                self.state.start_recording_with_samples(samples);
                 Ok(json!({ "status": "RecordingStarted" }))
             }
 
@@ -302,6 +310,28 @@ impl IpcBridge {
                     "status": "CameraKilled",
                     "camera_handle_closed": status.camera_handle_closed
                 }))
+            }
+
+            "getCatalogedApps" | "get_cataloged_apps" => {
+                let apps = self.state.cataloged_apps.read().clone();
+                Ok(json!({ "apps": apps }))
+            }
+
+            "refreshCatalogedApps" | "refresh_cataloged_apps" => {
+                let fresh = airctrl_actions::catalog_installed_applications();
+                *self.state.cataloged_apps.write() = fresh.clone();
+                Ok(json!({ "apps": fresh }))
+            }
+
+            "launchApp" | "launch_app" => {
+                let target = args
+                    .get("path")
+                    .or_else(|| args.get("name"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| IpcError::InvalidArguments("Application path or name required".into()))?;
+                let pid = airctrl_actions::launch_application(target)
+                    .map_err(IpcError::ExecutionFailed)?;
+                Ok(json!({ "success": true, "pid": pid, "target": target }))
             }
 
             unknown => Err(IpcError::CommandNotFound(unknown.to_string())),

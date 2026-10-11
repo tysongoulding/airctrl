@@ -40,6 +40,31 @@ export class MockTauriIpcBridge {
       status: "CameraKilled",
       camera_handle_closed: true,
     }),
+    getCatalogedApps: () => ({
+      apps: [
+        { id: "app-cursor", name: "Cursor", path: "cursor.exe", icon: "cpu", category: "Developer Tools" },
+        { id: "app-code", name: "Visual Studio Code", path: "code.exe", icon: "layout", category: "Developer Tools" },
+        { id: "app-chrome", name: "Google Chrome", path: "chrome.exe", icon: "window", category: "Web Browsers" },
+        { id: "app-terminal", name: "Windows Terminal", path: "wt.exe", icon: "terminal", category: "System Utilities" },
+        { id: "app-notepad", name: "Notepad", path: "notepad.exe", icon: "list", category: "Productivity" },
+        { id: "app-explorer", name: "File Explorer", path: "explorer.exe", icon: "layout", category: "System Utilities" },
+      ],
+    }),
+    refreshCatalogedApps: () => ({
+      apps: [
+        { id: "app-cursor", name: "Cursor", path: "cursor.exe", icon: "cpu", category: "Developer Tools" },
+        { id: "app-code", name: "Visual Studio Code", path: "code.exe", icon: "layout", category: "Developer Tools" },
+        { id: "app-chrome", name: "Google Chrome", path: "chrome.exe", icon: "window", category: "Web Browsers" },
+        { id: "app-terminal", name: "Windows Terminal", path: "wt.exe", icon: "terminal", category: "System Utilities" },
+        { id: "app-notepad", name: "Notepad", path: "notepad.exe", icon: "list", category: "Productivity" },
+        { id: "app-explorer", name: "File Explorer", path: "explorer.exe", icon: "layout", category: "System Utilities" },
+      ],
+    }),
+    launchApp: (args: any) => ({
+      success: true,
+      pid: 1234,
+      target: args?.path ?? "app.exe",
+    }),
   };
 
   public invoke<T = any>(command: string, args?: any): Promise<T> {

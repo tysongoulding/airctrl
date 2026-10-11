@@ -18,15 +18,20 @@ export const PrivacyControlsCard: React.FC<Props> = ({ settings, onUpdate }) => 
   };
 
   return (
-    <div className="hud-glass-card p-6 rounded-2xl flex flex-col gap-6">
-      <div className="flex items-center justify-between border-b border-slate-700/40 pb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-indigo-400" /> Meeting Detection & Privacy Controls
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time meeting watcher with sub-millisecond camera kill switch and compliance audio
-          </p>
+    <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-6 shadow-sm">
+      <div className="flex items-center justify-between border-b border-border/60 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              Meeting Detection & Privacy Controls
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Real-time process watcher with sub-millisecond atomic camera kill switch and compliance disclosure
+            </p>
+          </div>
         </div>
         <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5" /> Watcher Armed
@@ -35,16 +40,16 @@ export const PrivacyControlsCard: React.FC<Props> = ({ settings, onUpdate }) => 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Camera Auto-Kill Switch */}
-        <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+        <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+              <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-rose-400" /> Camera Privacy Auto-Kill Switch
               </label>
               <button
                 onClick={() => onUpdate({ camera_auto_kill: !settings.camera_auto_kill })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  settings.camera_auto_kill ? "bg-rose-600" : "bg-slate-700"
+                  settings.camera_auto_kill ? "bg-rose-600" : "bg-muted"
                 }`}
               >
                 <span
@@ -54,26 +59,29 @@ export const PrivacyControlsCard: React.FC<Props> = ({ settings, onUpdate }) => 
                 />
               </button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Immediately drops camera stream handles upon Zoom/Teams/Meet detection (&lt;1.0ms latency)
             </p>
           </div>
-          <span className="text-xs font-mono text-slate-400 mt-3">
-            Status: {settings.camera_auto_kill ? "Active (Auto-Release Enabled)" : "Disabled"}
-          </span>
+          <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Status:</span>
+            <span className={settings.camera_auto_kill ? "text-rose-400 font-semibold font-mono" : "text-muted-foreground"}>
+              {settings.camera_auto_kill ? "Armed (Auto-Kill on Meeting)" : "Disabled"}
+            </span>
+          </div>
         </div>
 
         {/* Legal Compliance Audio Injection */}
-        <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+        <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                <Volume2 className="w-4 h-4 text-amber-400" /> Compliance Audio Injection
+              <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <Volume2 className="w-4 h-4 text-indigo-400" /> Compliance Audio Injection
               </label>
               <button
                 onClick={() => onUpdate({ compliance_audio_enabled: !settings.compliance_audio_enabled })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  settings.compliance_audio_enabled ? "bg-indigo-600" : "bg-slate-700"
+                  settings.compliance_audio_enabled ? "bg-indigo-600" : "bg-muted"
                 }`}
               >
                 <span
@@ -83,38 +91,38 @@ export const PrivacyControlsCard: React.FC<Props> = ({ settings, onUpdate }) => 
                 />
               </button>
             </div>
-            <p className="text-xs text-slate-500">
-              Injects mandatory legal announcement ("This meeting is being recorded") into audio stream
+            <p className="text-xs text-muted-foreground">
+              Directly synthesizes &quot;This meeting is being recorded&quot; at &ge;0.50 volume floor
             </p>
           </div>
-          <span className="text-xs font-mono text-slate-400 mt-3">
-            Status: {settings.compliance_audio_enabled ? "Active (Disclosure Injected)" : "Disabled"}
-          </span>
+          <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Statutory Floor:</span>
+            <span className={settings.compliance_audio_enabled ? "text-indigo-400 font-semibold font-mono" : "text-muted-foreground"}>
+              {settings.compliance_audio_enabled ? "Enforced (50% Min Vol)" : "Bypassed"}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Emergency Manual Kill Button */}
-      <div className="bg-rose-950/30 border border-rose-900/50 p-4 rounded-xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <AlertOctagon className="w-6 h-6 text-rose-500 flex-shrink-0" />
-          <div>
-            <h3 className="text-sm font-semibold text-rose-300">
-              Manual Emergency Camera Kill Switch
-            </h3>
-            <p className="text-xs text-rose-400/80">
-              Force terminates camera hardware handles immediately across all threads
-            </p>
-          </div>
+      <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 flex items-center justify-between">
+        <div>
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <AlertOctagon className="w-4 h-4 text-rose-500" /> Emergency Hardware Kill-Switch
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manually trigger atomic CAS kill switch to revoke camera handles instantly
+          </p>
         </div>
         <button
           onClick={handleEmergencyKill}
-          className={`px-4 py-2 rounded-lg font-medium text-xs font-mono uppercase tracking-wider transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all ${
             killTriggered
-              ? "bg-rose-500 text-white shadow-lg shadow-rose-500/50"
-              : "bg-rose-700 hover:bg-rose-600 text-white shadow-md shadow-rose-700/40"
+              ? "bg-rose-700 text-white animate-pulse"
+              : "bg-rose-600 hover:bg-rose-500 text-white"
           }`}
         >
-          {killTriggered ? "Camera Killed!" : "Trigger Kill Switch"}
+          {killTriggered ? "Camera Killed!" : "Drop Camera Handle"}
         </button>
       </div>
     </div>

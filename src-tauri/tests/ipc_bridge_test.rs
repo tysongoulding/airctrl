@@ -384,3 +384,29 @@ fn test_ipc_settings_atomic_rollback_on_partial_failure() {
     assert_eq!(current_settings["hotkey_stt"], initial_hotkey);
 }
 
+#[test]
+fn test_ipc_get_and_refresh_cataloged_apps() {
+    let bridge = IpcBridge::default();
+
+    let res = bridge.invoke("getCatalogedApps", None).expect("getCatalogedApps failed");
+    assert!(res["apps"].is_array(), "apps must be an array");
+    let apps = res["apps"].as_array().unwrap();
+    assert!(!apps.is_empty(), "apps array must not be empty");
+
+    let res_refresh = bridge.invoke("refreshCatalogedApps", None).expect("refreshCatalogedApps failed");
+    assert!(res_refresh["apps"].is_array());
+}
+
+#[test]
+fn test_ipc_launch_app_validation() {
+    let bridge = IpcBridge::default();
+
+    // Rejects missing path/name
+    let err = bridge.invoke("launchApp", Some(json!({}))).expect_err("Must reject empty payload");
+    assert!(matches!(err, IpcError::InvalidArguments(_)));
+
+    // Rejects non-string path
+    let err2 = bridge.invoke("launchApp", Some(json!({ "path": 123 }))).expect_err("Must reject non-string");
+    assert!(matches!(err2, IpcError::InvalidArguments(_)));
+}
+

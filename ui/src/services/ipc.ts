@@ -28,4 +28,7 @@ export const tauriApi = {
   getMeetingStatus: () => invokeCommand("getMeetingStatus"),
   triggerCameraKillSwitch: () =>
     invokeCommand<{ success: boolean; status: string; camera_handle_closed: boolean }>("triggerCameraKillSwitch"),
+  getCatalogedApps: () => invokeCommand<{ apps: import("../types/config").ApplicationItem[] }>("getCatalogedApps"),
+  refreshCatalogedApps: () => invokeCommand<{ apps: import("../types/config").ApplicationItem[] }>("refreshCatalogedApps"),
+  launchApp: (path: string) => invokeCommand<{ success: boolean; pid: number }>("launchApp", { path }),
 };

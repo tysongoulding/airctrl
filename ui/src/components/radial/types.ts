@@ -1,4 +1,4 @@
-export type SectorIconName = "window" | "x" | "layout" | "cpu" | "list" | "gear";
+export type SectorIconName = "window" | "x" | "layout" | "cpu" | "list" | "gear" | "terminal" | "mic" | "play";
 
 export interface RadialSectorItem {
   id: number;

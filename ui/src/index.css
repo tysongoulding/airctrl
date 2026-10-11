@@ -2,17 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --hud-opacity: 0.95;
-  --hud-bg-rgb: 255, 255, 255;
-  --hud-card-rgb: 248, 250, 252;
-  --hud-border-rgb: 203, 213, 225;
-}
+@layer base {
+  :root {
+    --background: 240 10% 98%;
+    --foreground: 240 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --muted: 240 5% 92%;
+    --muted-foreground: 240 4% 45%;
+    --border: 240 6% 88%;
+    --hud-opacity: 0.95;
+    --hud-bg-rgb: 255, 255, 255;
+    --hud-card-rgb: 248, 250, 252;
+    --hud-border-rgb: 203, 213, 225;
+  }
 
-.dark {
-  --hud-bg-rgb: 15, 23, 42;
-  --hud-card-rgb: 30, 41, 59;
-  --hud-border-rgb: 51, 65, 85;
+  .dark {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 7%;
+    --card-foreground: 0 0% 98%;
+    --muted: 240 5% 15%;
+    --muted-foreground: 240 5% 65%;
+    --border: 240 5% 18%;
+    --hud-bg-rgb: 15, 23, 42;
+    --hud-card-rgb: 30, 41, 59;
+    --hud-border-rgb: 51, 65, 85;
+  }
 }
 
 body {

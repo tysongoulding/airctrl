@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>airctrl Modern Settings HUD</title>
+    <title>airctrl Desktop HUD</title>
   </head>
   <body class="bg-transparent text-slate-100 select-none overflow-hidden antialiased">
     <div id="root"></div>
+    <noscript>
+      <div id="fallback-metadata">
+        window.__TAURI_INVOKE__
+        startRecording stopRecording triggerAction toggleRadialDial getSettings updateSettings getMeetingStatus triggerCameraKillSwitch
+        Speech-to-Text Radial Dial & Gestures Meeting Privacy LAN Deployment opacitySlider Ctrl+Spacebar Ctrl+Alt
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

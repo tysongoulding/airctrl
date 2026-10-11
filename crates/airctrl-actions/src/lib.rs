@@ -25,7 +25,8 @@ pub use router::{parse_voice_command, RouterConfig, SemanticCommandRouter};
 
 // Crawler re-exports
 pub use crawler::{
-    crawl_running_applications, CrawlerConfig, WindowContextMap, WindowMatcher, WindowProcessCrawler,
+    catalog_installed_applications, crawl_running_applications, launch_application,
+    CrawlerConfig, WindowContextMap, WindowMatcher, WindowProcessCrawler,
 };
 
 // Hotkey and radial dial re-exports

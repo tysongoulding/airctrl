@@ -111,3 +111,13 @@ pub struct WindowMatch {
     pub match_type: MatchType,
     pub score: f32,
 }
+
+/// Discovered desktop application catalog item.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApplicationItem {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub icon: Option<String>,
+    pub category: String,
+}
