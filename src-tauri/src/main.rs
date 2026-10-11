@@ -25,6 +25,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,
             commands::stop_recording,
+            commands::toggle_stt_overlay,
             commands::trigger_action,
             commands::toggle_radial_dial,
             commands::get_settings,

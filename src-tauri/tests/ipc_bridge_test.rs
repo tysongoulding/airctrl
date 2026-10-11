@@ -410,3 +410,15 @@ fn test_ipc_launch_app_validation() {
     assert!(matches!(err2, IpcError::InvalidArguments(_)));
 }
 
+#[test]
+fn test_ipc_toggle_stt_overlay() {
+    let bridge = IpcBridge::default();
+
+    let res1 = bridge.invoke("toggleSttOverlay", None).expect("toggleSttOverlay failed");
+    assert_eq!(res1["stt_overlay_visible"], true);
+
+    let res2 = bridge.invoke("toggleSttOverlay", None).expect("toggleSttOverlay failed");
+    assert_eq!(res2["stt_overlay_visible"], false);
+}
+
+

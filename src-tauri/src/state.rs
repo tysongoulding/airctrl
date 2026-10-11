@@ -22,6 +22,7 @@ pub struct AppState {
     pub camera_kill_switch: Arc<CameraKillSwitch>,
     pub event_bus: EventBus,
     pub cataloged_apps: RwLock<Vec<airctrl_core::types::ApplicationItem>>,
+    pub stt_overlay_visible: AtomicBool,
 }
 
 impl Default for AppState {
@@ -61,6 +62,7 @@ impl AppState {
             camera_kill_switch,
             event_bus,
             cataloged_apps,
+            stt_overlay_visible: AtomicBool::new(false),
         }
     }
 

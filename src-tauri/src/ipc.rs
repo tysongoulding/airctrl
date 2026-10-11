@@ -142,6 +142,18 @@ impl IpcBridge {
                 Ok(json!({ "dial_visible": is_visible }))
             }
 
+            "toggleSttOverlay" => {
+                let current = self
+                    .state
+                    .stt_overlay_visible
+                    .load(std::sync::atomic::Ordering::SeqCst);
+                let next = !current;
+                self.state
+                    .stt_overlay_visible
+                    .store(next, std::sync::atomic::Ordering::SeqCst);
+                Ok(json!({ "stt_overlay_visible": next }))
+            }
+
             "getSettings" => {
                 let config = self.state.config.read();
                 let hotkey_stt = if config.stt_hotkey == "Ctrl+Space" {

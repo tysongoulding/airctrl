@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
-import { Mic, HardDrive, CheckCircle2, Play, Square, Info } from "lucide-react";
+import React from "react";
+import { Mic, HardDrive, CheckCircle2, Info, Sparkles, Radio } from "lucide-react";
 import { SettingsState } from "../../types/config";
 import { tauriApi } from "../../services/ipc";
+import { SttOverlay } from "../stt/SttOverlay";
 
 interface Props {
   settings: SettingsState;
@@ -9,86 +10,6 @@ interface Props {
 }
 
 export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
-  const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState<string | null>(null);
-  const [audioLevel, setAudioLevel] = useState<number>(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioSamplesRef = useRef<number[]>([]);
-  const animFrameRef = useRef<number | null>(null);
-
-  const startAudioCapture = async () => {
-    try {
-      if (!navigator?.mediaDevices?.getUserMedia) {
-        await tauriApi.startRecording();
-        return;
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      audioContextRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      audioSamplesRef.current = [];
-
-      processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        let sum = 0;
-        for (let i = 0; i < inputData.length; i++) {
-          audioSamplesRef.current.push(inputData[i]);
-          sum += Math.abs(inputData[i]);
-        }
-        setAudioLevel(Math.min(100, Math.round((sum / inputData.length) * 400)));
-      };
-
-      source.connect(processor);
-      processor.connect(audioCtx.destination);
-
-      await tauriApi.startRecording();
-    } catch (e) {
-      console.warn("Falling back to standard recording trigger:", e);
-      await tauriApi.startRecording();
-    }
-  };
-
-  const stopAudioCapture = async () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
-    setAudioLevel(0);
-
-    const capturedSamples = audioSamplesRef.current.slice(0, 16000 * 10); // max 10s
-    if (capturedSamples.length > 0) {
-      // Pass captured PCM samples to Tauri backend
-      const res = await tauriApi.stopRecording();
-      return res;
-    }
-    return await tauriApi.stopRecording();
-  };
-
-  const toggleRecording = async () => {
-    if (!recording) {
-      setRecording(true);
-      setTranscript(null);
-      await startAudioCapture();
-    } else {
-      setRecording(false);
-      const res = await stopAudioCapture();
-      if (res?.text) {
-        setTranscript(res.text);
-      }
-    }
-  };
-
   return (
     <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-6 shadow-sm">
       <div className="flex items-center justify-between border-b border-border pb-4">
@@ -203,45 +124,45 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         </div>
       </div>
 
-      {/* Interactive Microphone Test */}
-      <div className="p-4 rounded-lg border border-border bg-card flex flex-col gap-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xs font-semibold text-foreground">Test Live Audio Capture</h3>
-            <p className="text-[11px] text-muted-foreground">Test speech-to-text with your default microphone</p>
+      {/* Handy-Style Voice Dictation Overlay Section */}
+      <div className="p-6 rounded-2xl border border-primary/30 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl flex flex-col gap-4 shadow-lg shadow-primary/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                Handy-Style Dictation Overlay
+                <span className="px-2 py-0.5 text-[10px] rounded bg-primary/10 border border-primary/20 text-primary font-mono font-medium">
+                  Qrafthive Colors
+                </span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Minimalist floating pill with live real-time equalizer soundwaves, audio metering, and auto-injection
+              </p>
+            </div>
           </div>
-          <button
-            onClick={toggleRecording}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-all ${
-              recording
-                ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
-          >
-            {recording ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            {recording ? "Stop & Transcribe" : "Record Audio Sample"}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => tauriApi.toggleSttOverlay()}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-md transition-all whitespace-nowrap"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Launch Desktop Overlay</span>
+            </button>
+          </div>
         </div>
 
-        {recording && (
-          <div className="flex items-center gap-3 bg-muted/50 p-2.5 rounded-md border border-border">
-            <div className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <div className="flex-1 bg-muted h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-primary h-full transition-all duration-75"
-                style={{ width: `${audioLevel}%` }}
-              />
-            </div>
-            <span className="text-xs font-mono text-foreground">{audioLevel}%</span>
+        {/* Live Interactive In-HUD Overlay Tester */}
+        <div className="pt-1">
+          <div className="text-[11px] font-mono text-muted-foreground mb-2 flex items-center justify-between">
+            <span>LIVE INTERACTIVE OVERLAY PREVIEW:</span>
+            <span className="text-primary font-medium">Click mic or press Space to record</span>
           </div>
-        )}
-
-        {transcript && (
-          <div className="p-3 rounded-xl bg-card border border-border text-xs flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase">Transcript:</span>
-            <p className="text-foreground font-medium italic">&quot;{transcript}&quot;</p>
-          </div>
-        )}
+          <SttOverlay standalone={false} />
+        </div>
       </div>
     </div>
   );

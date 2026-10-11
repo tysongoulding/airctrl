@@ -8,6 +8,7 @@ export class MockTauriIpcBridge {
     stopRecording: () => ({ status: "TranscriptionReady", text: "hello" }),
     triggerAction: (args: any) => ({ success: true, action: args?.action ?? "WindowSnap" }),
     toggleRadialDial: () => ({ dial_visible: true }),
+    toggleSttOverlay: () => ({ stt_overlay_visible: true }),
     getSettings: () => ({
       hotkey_stt: "Ctrl+Spacebar",
       hotkey_dial: "Ctrl+Alt",

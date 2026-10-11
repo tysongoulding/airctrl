@@ -32,6 +32,7 @@ export const tauriApi = {
   triggerAction: (action: string, params?: any) =>
     invokeCommand<{ success: boolean; action: any }>("triggerAction", { action, ...params }),
   toggleRadialDial: (args?: any) => invokeCommand<{ dial_visible: boolean }>("toggleRadialDial", args),
+  toggleSttOverlay: (args?: any) => invokeCommand<{ stt_overlay_visible: boolean }>("toggleSttOverlay", args),
   getSettings: () => invokeCommand("getSettings"),
   updateSettings: (settings: any) => invokeCommand("updateSettings", settings),
   getMeetingStatus: () => invokeCommand("getMeetingStatus"),
