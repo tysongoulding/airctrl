@@ -1,0 +1,43 @@
+[package]
+name = "airctrl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Tauri 2.0 desktop shell and IPC bridge for airctrl"
+
+[[bin]]
+name = "airctrl"
+path = "src/main.rs"
+
+[lib]
+name = "airctrl_shell"
+path = "src/lib.rs"
+
+[dependencies]
+airctrl-core = { workspace = true }
+airctrl-lan = { workspace = true }
+airctrl-stt = { workspace = true }
+airctrl-actions = { workspace = true }
+airctrl-gestures = { workspace = true }
+airctrl-meetings = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+parking_lot = "0.12"
+chrono = { workspace = true }
+
+# Tauri 2.0 dependencies
+tauri = { version = "2.0", default-features = false, features = ["wry", "tray-icon"] }
+
+[build-dependencies]
+tauri-build = { version = "2.0", default-features = false }
+
+[features]
+default = []
+test-mock = []

@@ -1,0 +1,94 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/airctrl-core",
+    "crates/airctrl-lan",
+    "crates/airctrl-stt",
+    "crates/airctrl-actions",
+    "crates/airctrl-gestures",
+    "crates/airctrl-meetings",
+    "src-tauri",
+]
+default-members = [
+    "crates/airctrl-core",
+    "crates/airctrl-lan",
+    "crates/airctrl-stt",
+    "crates/airctrl-actions",
+    "crates/airctrl-gestures",
+    "crates/airctrl-meetings",
+    "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+authors = ["Tyson Goulding <tyson@example.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/tysongoulding/airctrl"
+
+[workspace.dependencies]
+# Internal workspace crates
+airctrl-core = { path = "crates/airctrl-core" }
+airctrl-lan = { path = "crates/airctrl-lan" }
+airctrl-stt = { path = "crates/airctrl-stt" }
+airctrl-actions = { path = "crates/airctrl-actions" }
+airctrl-gestures = { path = "crates/airctrl-gestures" }
+airctrl-meetings = { path = "crates/airctrl-meetings" }
+
+# Serialization & Error Handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Async Runtime & Concurrency
+tokio = { version = "1.43", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = "0.1"
+futures = "0.3"
+async-trait = "0.1"
+
+# Logging & Telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+# Networking & HTTP Server (airctrl-lan)
+axum = { version = "0.8", features = ["tokio", "http1"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+local-ip-address = "0.6"
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tempfile = "3.10"
+
+# Audio Processing (airctrl-stt & airctrl-meetings)
+hound = "3.5"
+cpal = "0.15"
+rodio = "0.20"
+
+# System Inspection & Utilities
+sysinfo = "0.33"
+strsim = "0.11"
+regex = "1.11"
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.13", features = ["v4", "serde"] }
+
+# Image & Frame Processing (airctrl-gestures)
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.test]
+opt-level = 0
+debug = true

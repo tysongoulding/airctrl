@@ -1,0 +1,11 @@
+/target
+/dist/*.exe
+/dist/*.sha256
+*.log
+.agents/
+.pytest_cache/
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+*.swp

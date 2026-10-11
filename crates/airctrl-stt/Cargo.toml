@@ -1,0 +1,37 @@
+[package]
+name = "airctrl-stt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Offline Whisper speech-to-text pipeline and active window text injection for airctrl"
+
+[dependencies]
+airctrl-core = { workspace = true }
+hound = { workspace = true }
+cpal = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+
+arboard = { version = "3.4", optional = true }
+enigo = { version = "0.2", optional = true }
+
+[features]
+default = []
+arboard = ["dep:arboard"]
+enigo = ["dep:enigo"]
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

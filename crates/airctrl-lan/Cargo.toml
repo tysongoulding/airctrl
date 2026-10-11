@@ -1,0 +1,31 @@
+[package]
+name = "airctrl-lan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Embedded async LAN HTTP distribution daemon and dynamic run.ps1 generator for airctrl"
+
+[dependencies]
+airctrl-core = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+reqwest = { workspace = true }
+tempfile = { workspace = true }
+
+[[bin]]
+name = "airctrl-lan"
+path = "src/bin/airctrl_lan_daemon.rs"

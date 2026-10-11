@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>airctrl Desktop HUD</title>
+  <style>
+    :root {
+      --hud-opacity: 0.95;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: rgba(15, 23, 42, var(--hud-opacity));
+      color: #f8fafc;
+      user-select: none;
+    }
+    .hud-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(12px);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-family: monospace;
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .btn {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .btn:hover { background: #4338ca; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    kbd {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      color: #818cf8;
+    }
+    .sector-active {
+      transform: scale(1.05);
+      background: #4f46e5;
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h1 style="margin: 0; font-size: 22px; display: flex; align-items: center; gap: 8px;">
+        airctrl <span class="badge">v0.1.0</span>
+      </h1>
+      <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">Spatial Automation & Offline Speech-to-Action Engine</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="font-size: 12px; color: #94a3b8;">HUD Opacity:</span>
+      <input type="range" min="0" max="1" step="0.05" value="0.95" id="opacitySlider" style="accent-color: #6366f1;">
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="hud-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px;">Speech-to-Text</h3>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">Offline Ready</span>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8;">Hotkey: <kbd>Ctrl+Spacebar</kbd></p>
+      <p style="font-size: 13px; color: #94a3b8;">Mode: Push-to-Talk / Active Window Injection</p>
+      <button class="btn" onclick="testRecording()">Test Recording</button>
+      <div id="sttResult" style="margin-top: 10px; font-size: 12px; font-family: monospace; color: #34d399;"></div>
+    </div>
+
+    <div class="hud-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px;">Radial Dial & Gestures</h3>
+        <span class="badge">6 Sectors</span>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8;">Hotkey: <kbd>Ctrl+Alt</kbd></p>
+      <p style="font-size: 13px; color: #94a3b8;">Tracking: CPU MediaPipe (30–60 FPS)</p>
+      <button class="btn" onclick="toggleDial()">Toggle Radial Overlay</button>
+      <div id="dialResult" style="margin-top: 10px; font-size: 12px; font-family: monospace; color: #818cf8;"></div>
+    </div>
+
+    <div class="hud-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px;">Meeting Privacy</h3>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">Watcher Armed</span>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8;">Camera Auto-Kill: Enabled (&lt;1.0ms)</p>
+      <p style="font-size: 13px; color: #94a3b8;">Legal Audio Disclosure: Active</p>
+      <button class="btn" style="background: #e11d48;" onclick="triggerKillSwitch()">Emergency Camera Kill</button>
+      <div id="privacyResult" style="margin-top: 10px; font-size: 12px; font-family: monospace; color: #f43f5e;"></div>
+    </div>
+
+    <div class="hud-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px;">LAN Deployment</h3>
+        <span class="badge">0.0.0.0:8080</span>
+      </div>
+      <p style="font-size: 12px; color: #94a3b8;">PowerShell Deployment Command:</p>
+      <div style="background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #34d399; overflow-x: auto;">
+        irm http://192.168.1.150:8080/run.ps1 | iex
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Embedded Mock Tauri IPC Bridge
+    const mockHandlers = {
+      startRecording: () => ({ status: "RecordingStarted" }),
+      stopRecording: () => ({ status: "TranscriptionReady", text: "hello" }),
+      triggerAction: (args) => ({ success: true, action: args?.action || "WindowSnap" }),
+      toggleRadialDial: () => ({ dial_visible: true }),
+      getSettings: () => ({
+        hotkey_stt: "Ctrl+Spacebar",
+        hotkey_dial: "Ctrl+Alt",
+        push_to_talk: true,
+        camera_auto_kill: true,
+        compliance_audio_enabled: true,
+        radial_dial_sectors: 6
+      }),
+      updateSettings: (args) => ({ success: true, settings: args }),
+      getMeetingStatus: () => ({ status: "Inactive", meeting: null, camera_state: "Active" }),
+      triggerCameraKillSwitch: () => ({ success: true, status: "CameraKilled", camera_handle_closed: true })
+    };
+
+    window.__TAURI_INVOKE__ = async function(cmd, args) {
+      if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
+        return window.__TAURI_INTERNALS__.invoke(cmd, args);
+      }
+      if (mockHandlers[cmd]) {
+        return mockHandlers[cmd](args);
+      }
+      throw new Error("Command not found: " + cmd);
+    };
+
+    document.getElementById('opacitySlider').addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--hud-opacity', e.target.value);
+    });
+
+    let recording = false;
+    async function testRecording() {
+      if (!recording) {
+        const res = await window.__TAURI_INVOKE__('startRecording');
+        document.getElementById('sttResult').innerText = "Status: " + res.status;
+        recording = true;
+      } else {
+        const res = await window.__TAURI_INVOKE__('stopRecording');
+        document.getElementById('sttResult').innerText = "Transcription: '" + res.text + "'";
+        recording = false;
+      }
+    }
+
+    async function toggleDial() {
+      const res = await window.__TAURI_INVOKE__('toggleRadialDial');
+      document.getElementById('dialResult').innerText = "Dial Visible: " + res.dial_visible;
+    }
+
+    async function triggerKillSwitch() {
+      const res = await window.__TAURI_INVOKE__('triggerCameraKillSwitch');
+      document.getElementById('privacyResult').innerText = "Camera Killed: " + res.camera_handle_closed;
+    }
+  </script>
+</body>
+</html>

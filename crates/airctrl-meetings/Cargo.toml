@@ -1,0 +1,27 @@
+[package]
+name = "airctrl-meetings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Meeting process/audio watcher, camera privacy auto-kill switch, and compliance audio disclosure for airctrl"
+
+[dependencies]
+airctrl-core = { workspace = true }
+airctrl-actions = { workspace = true }
+sysinfo = { workspace = true }
+cpal = { workspace = true }
+rodio = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+regex = { workspace = true }
+hound = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

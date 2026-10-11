@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --hud-opacity: 0.95;
+  --hud-bg-rgb: 255, 255, 255;
+  --hud-card-rgb: 248, 250, 252;
+  --hud-border-rgb: 203, 213, 225;
+}
+
+.dark {
+  --hud-bg-rgb: 15, 23, 42;
+  --hud-card-rgb: 30, 41, 59;
+  --hud-border-rgb: 51, 65, 85;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  user-select: none;
+}
+
+/* Glassmorphism glass card backdrop */
+.hud-glass-card {
+  background-color: rgba(var(--hud-card-rgb), var(--hud-opacity, 0.95));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--hud-border-rgb), 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Active sector hover class strictly adhering to test_t1_f25 */
+.sector-active {
+  @apply scale-105 bg-indigo-600 text-white shadow-lg;
+}
