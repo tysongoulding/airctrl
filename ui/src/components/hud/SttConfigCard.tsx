@@ -91,13 +91,13 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
 
   return (
     <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-6 shadow-sm">
-      <div className="flex items-center justify-between border-b border-border/60 pb-4">
+      <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Mic className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground">
+            <Mic className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               Offline Speech-to-Text Configuration
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -105,14 +105,14 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
             </p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5" /> Engine Ready
+        <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground text-xs font-mono flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Engine Ready
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Global STT Hotkey */}
-        <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+        <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
           <div>
             <label className="text-xs font-medium text-foreground block mb-1">
               Global Transcription Hotkey
@@ -125,7 +125,7 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
             <select
               value={settings.hotkey_stt}
               onChange={(e) => onUpdate({ hotkey_stt: e.target.value })}
-              className="px-3 py-1.5 rounded-lg bg-background border border-border text-indigo-400 font-mono text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="px-3 py-1.5 rounded-md bg-background border border-border text-foreground font-mono text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="Ctrl+Win">Ctrl+Win (Recommended)</option>
               <option value="Ctrl+Spacebar">Ctrl+Spacebar</option>
@@ -137,7 +137,7 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         </div>
 
         {/* Push-to-Talk Toggle */}
-        <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+        <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
           <div>
             <label className="text-xs font-medium text-foreground block mb-1">
               Capture Mode
@@ -152,13 +152,13 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
             </span>
             <button
               onClick={() => onUpdate({ push_to_talk: !settings.push_to_talk })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                settings.push_to_talk ? "bg-indigo-600" : "bg-muted"
+              className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+                settings.push_to_talk ? "bg-primary" : "bg-muted border border-border"
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings.push_to_talk ? "translate-x-6" : "translate-x-1"
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform ${
+                  settings.push_to_talk ? "translate-x-5" : "translate-x-1"
                 }`}
               />
             </button>
@@ -167,21 +167,21 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
       </div>
 
       {/* Safe Hotkey Explanation */}
-      <div className="p-3.5 rounded-xl border border-indigo-500/20 bg-indigo-500/5 flex items-start gap-3">
-        <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+      <div className="p-3.5 rounded-lg border border-border bg-muted/40 flex items-start gap-3">
+        <Info className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
         <div className="text-xs text-muted-foreground leading-relaxed">
           <span className="font-semibold text-foreground">Safe Windows Hotkey: </span>
-          <code className="text-indigo-400 font-mono px-1 py-0.5 bg-muted rounded">Ctrl+Win</code> is intercepted via a low-level OS hook that suppresses the standalone Windows key release, preventing the Start Menu from appearing during transcription.
+          <code className="text-foreground font-mono px-1 py-0.5 bg-background border border-border rounded">Ctrl+Win</code> is intercepted via a low-level OS hook that suppresses the standalone Windows key release, preventing the Start Menu from appearing during transcription.
         </div>
       </div>
 
       {/* Whisper Model Selector */}
-      <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col gap-3">
+      <div className="p-4 rounded-lg border border-border bg-card flex flex-col gap-3 shadow-sm">
         <div className="flex items-center justify-between">
           <label className="text-xs font-medium text-foreground flex items-center gap-2">
-            <HardDrive className="w-4 h-4 text-indigo-400" /> Whisper Model Configuration
+            <HardDrive className="w-3.5 h-3.5 text-muted-foreground" /> Whisper Model Configuration
           </label>
-          <span className="text-xs text-indigo-400 font-mono">
+          <span className="text-xs text-muted-foreground font-mono">
             {settings.whisper_model}
           </span>
         </div>
@@ -190,21 +190,21 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
             <button
               key={m}
               onClick={() => onUpdate({ whisper_model: m })}
-              className={`p-2.5 rounded-xl border text-xs font-mono text-left transition-all ${
+              className={`p-2.5 rounded-lg border text-xs font-mono text-left transition-all ${
                 settings.whisper_model === m
-                  ? "bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-sm"
-                  : "bg-background border-border text-muted-foreground hover:text-foreground"
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
               <div className="font-bold text-[11px] mb-0.5">{m.replace("models/ggml-", "").replace(".bin", "").toUpperCase()}</div>
-              <div className="text-[10px] text-muted-foreground">Local CPU quantized model</div>
+              <div className={`text-[10px] ${settings.whisper_model === m ? "text-primary-foreground/80" : "text-muted-foreground"}`}>Local CPU quantized model</div>
             </button>
           ))}
         </div>
       </div>
 
       {/* Interactive Microphone Test */}
-      <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col gap-3">
+      <div className="p-4 rounded-lg border border-border bg-card flex flex-col gap-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xs font-semibold text-foreground">Test Live Audio Capture</h3>
@@ -212,10 +212,10 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
           </div>
           <button
             onClick={toggleRecording}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-all ${
               recording
                 ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
-                : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >
             {recording ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -224,15 +224,15 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         </div>
 
         {recording && (
-          <div className="flex items-center gap-3 bg-card p-3 rounded-lg border border-border">
-            <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-            <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden">
+          <div className="flex items-center gap-3 bg-muted/50 p-2.5 rounded-md border border-border">
+            <div className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            <div className="flex-1 bg-muted h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-indigo-500 h-full transition-all duration-75"
+                className="bg-primary h-full transition-all duration-75"
                 style={{ width: `${audioLevel}%` }}
               />
             </div>
-            <span className="text-xs font-mono text-indigo-400">{audioLevel}%</span>
+            <span className="text-xs font-mono text-foreground">{audioLevel}%</span>
           </div>
         )}
 

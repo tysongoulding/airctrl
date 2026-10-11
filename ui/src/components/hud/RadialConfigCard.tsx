@@ -46,16 +46,16 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
     <div className="flex flex-col gap-6">
       {/* 6-Sector Dial Overview & Controls */}
       <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <Compass className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground">
+              <Compass className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 6-Sector Radial Dial Configuration
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Customize applications, system actions, and AI agent shortcuts on each dial sector
               </p>
             </div>
@@ -64,7 +64,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggleOverlay}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all"
             >
               <Eye className="w-3.5 h-3.5" />
               {dialOverlayState ? "Hide Overlay Window" : "Test Overlay Window"}
@@ -74,7 +74,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
 
         {/* Global Dial Hotkey & Sensitivity Settings */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+          <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
             <div>
               <label className="text-xs font-medium text-foreground block mb-1">
                 Global Dial Hotkey
@@ -84,14 +84,14 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
               </p>
             </div>
             <div className="flex items-center justify-between">
-              <kbd className="px-3 py-1.5 rounded-lg bg-muted border border-border text-indigo-400 font-mono text-xs font-semibold">
+              <kbd className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-xs font-semibold">
                 {settings.hotkey_dial}
               </kbd>
               <span className="text-[11px] text-muted-foreground">Default: Ctrl+Spacebar</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+          <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
             <div>
               <label className="text-xs font-medium text-foreground block mb-1">
                 Deadzone Radius ({settings.deadzone_radius.toFixed(2)})
@@ -107,11 +107,11 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
               step="0.01"
               value={settings.deadzone_radius}
               onChange={(e) => onUpdate({ deadzone_radius: parseFloat(e.target.value) })}
-              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+          <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
             <div>
               <label className="text-xs font-medium text-foreground block mb-1">
                 Dial Inactivity Timeout ({settings.dial_timeout_secs}s)
@@ -127,7 +127,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
               step="0.5"
               value={settings.dial_timeout_secs}
               onChange={(e) => onUpdate({ dial_timeout_secs: parseFloat(e.target.value) })}
-              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
           </div>
         </div>
@@ -136,7 +136,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-indigo-400" /> Dial Sectors (Click to Edit)
+              <Sliders className="w-3.5 h-3.5 text-muted-foreground" /> Dial Sectors (Click to Edit)
             </span>
             <span className="text-[11px] text-muted-foreground font-mono">
               Hover to preview styling
@@ -153,21 +153,21 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
                   onClick={() => setSelectedSectorId(sector.id)}
                   onMouseEnter={() => setHoveredSector(sector.id)}
                   onMouseLeave={() => setHoveredSector(null)}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all cursor-pointer select-none text-center ${
+                  className={`p-3 rounded-lg border flex flex-col items-center justify-center gap-2 transition-all cursor-pointer select-none text-center ${
                     isSelected
-                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-md ring-1 ring-indigo-500/50"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : isHovered
                       ? RADIAL_DIAL_CONFIG.activeClass
-                      : "border-border bg-background/50 text-foreground hover:border-border/80"
+                      : "border-border bg-card text-foreground hover:border-border/80"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-card/80 flex items-center justify-center">
+                  <div className={`w-8 h-8 rounded-md flex items-center justify-center ${isSelected ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-foreground"}`}>
                     <RadialIcon name={sector.icon} className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-semibold truncate max-w-full">
+                  <span className="text-xs font-medium truncate max-w-full">
                     {sector.label}
                   </span>
-                  <span className="text-[10px] font-mono text-muted-foreground">
+                  <span className={`text-[10px] font-mono ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                     Sector {sector.id}
                   </span>
                 </div>
@@ -177,13 +177,13 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         </div>
 
         {/* Sector Editor Form */}
-        <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="p-4 rounded-lg border border-border bg-card flex flex-col gap-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-3">
             <span className="text-xs font-semibold text-foreground flex items-center gap-2">
-              Editing Sector {currentSector.id}: <span className="text-indigo-400 font-mono">{currentSector.label}</span>
+              Editing Sector {currentSector.id}: <span className="text-foreground font-mono bg-muted px-2 py-0.5 rounded">{currentSector.label}</span>
             </span>
             {saveToast && (
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+              <span className="text-[10px] text-emerald-500 flex items-center gap-1 font-mono">
                 <Check className="w-3 h-3" /> Saved
               </span>
             )}
@@ -198,7 +198,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
                 value={currentSector.label}
                 maxLength={30}
                 onChange={(e) => updateSector({ label: e.target.value })}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-1.5 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
@@ -208,7 +208,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
               <select
                 value={currentSector.action_type || "app"}
                 onChange={(e) => updateSector({ action_type: e.target.value as any })}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-1.5 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="app">Launch Application (.exe)</option>
                 <option value="window">Window Action (Snap / Focus)</option>
@@ -225,7 +225,7 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
                 value={currentSector.target || ""}
                 onChange={(e) => updateSector({ target: e.target.value })}
                 placeholder="e.g. cursor.exe, left, claude"
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-1.5 bg-background border border-border rounded-md text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
           </div>
@@ -238,10 +238,10 @@ export const RadialConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
                 <button
                   key={iconName}
                   onClick={() => updateSector({ icon: iconName })}
-                  className={`p-2 rounded-lg border transition-all flex items-center gap-1.5 text-xs ${
+                  className={`p-2 rounded-md border transition-all flex items-center gap-1.5 text-xs ${
                     currentSector.icon === iconName
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                      : "bg-background border-border text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   }`}
                 >
                   <RadialIcon name={iconName} className="w-3.5 h-3.5" />

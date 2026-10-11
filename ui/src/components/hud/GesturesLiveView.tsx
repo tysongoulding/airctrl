@@ -227,16 +227,16 @@ export const GesturesLiveView: React.FC = () => {
     <div className="flex flex-col gap-6">
       {/* Live Video Tracking & Skeleton Viewport */}
       <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-4 shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/60 pb-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <Hand className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground">
+              <Hand className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 Real-Time Hand Tracking & 21-Landmark Canvas
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 MediaPipe 3D Hand Landmarker running on CPU with sub-millisecond gesture inference
               </p>
             </div>
@@ -245,10 +245,10 @@ export const GesturesLiveView: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={cameraActive ? stopCamera : startCamera}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 cameraActive
-                  ? "bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20"
-                  : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm"
+                  ? "bg-rose-500/10 border border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
               }`}
             >
               {cameraActive ? <CameraOff className="w-3.5 h-3.5" /> : <Camera className="w-3.5 h-3.5" />}
@@ -258,7 +258,7 @@ export const GesturesLiveView: React.FC = () => {
         </div>
 
         {/* Viewport Display Canvas */}
-        <div className="relative w-full h-[340px] rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+        <div className="relative w-full h-[340px] rounded-lg overflow-hidden bg-black border border-border flex items-center justify-center shadow-inner">
           <video
             ref={videoRef}
             className={`absolute inset-0 w-full h-full object-cover transform -scale-x-100 ${
@@ -274,16 +274,16 @@ export const GesturesLiveView: React.FC = () => {
 
           {!cameraActive && (
             <div className="flex flex-col items-center gap-3 text-center p-6 z-10">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                <Camera className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground">
+                <Camera className="w-5 h-5" />
               </div>
-              <p className="text-sm font-medium text-slate-300">Camera Tracking Inactive</p>
-              <p className="text-xs text-slate-500 max-w-sm">
+              <p className="text-xs font-medium text-foreground">Camera Tracking Inactive</p>
+              <p className="text-xs text-muted-foreground max-w-sm">
                 Click &quot;Enable Live Tracking&quot; to initialize your webcam stream and view real-time 21-landmark MediaPipe hand tracking.
               </p>
               <button
                 onClick={startCamera}
-                className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-all"
+                className="mt-2 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-medium shadow-sm transition-all"
               >
                 Start Live Feed
               </button>
@@ -291,34 +291,34 @@ export const GesturesLiveView: React.FC = () => {
           )}
 
           {cameraActive && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs font-mono">
+            <div className="absolute top-3 left-3 flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-border text-xs font-mono">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-slate-200">Tracking Active</span>
-              <span className="text-slate-500">|</span>
-              <span className="text-indigo-400 font-bold">{measuredFps} FPS</span>
+              <span className="text-foreground">Tracking Active</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-foreground font-bold">{measuredFps} FPS</span>
             </div>
           )}
 
           {cameraActive && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs font-mono">
-              <span className="text-slate-400">{handSide}</span>
-              <span className="text-slate-500">|</span>
-              <span className="text-emerald-400 font-semibold">{activeGesture}</span>
+            <div className="absolute top-3 right-3 flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-border text-xs font-mono">
+              <span className="text-muted-foreground">{handSide}</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-emerald-500 font-semibold">{activeGesture}</span>
             </div>
           )}
 
           {cameraActive && (
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-lg border border-slate-700/60 text-xs font-mono">
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-background/80 backdrop-blur-md px-4 py-2 rounded-md border border-border text-xs font-mono">
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Pinch Distance:</span>
-                <span className={`font-bold ${pinchDistance <= 0.05 ? "text-emerald-400" : "text-slate-200"}`}>
+                <span className="text-muted-foreground">Pinch Distance:</span>
+                <span className={`font-bold ${pinchDistance <= 0.05 ? "text-emerald-500" : "text-foreground"}`}>
                   {pinchDistance.toFixed(3)}
                 </span>
-                <span className="text-[10px] text-slate-500">(Threshold: ≤0.05)</span>
+                <span className="text-[10px] text-muted-foreground">(Threshold: ≤0.05)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Radial Sector:</span>
-                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold">
+                <span className="text-muted-foreground">Radial Sector:</span>
+                <span className="px-2 py-0.5 rounded bg-muted border border-border text-foreground font-bold">
                   Sector {activeSector}
                 </span>
               </div>
@@ -327,7 +327,7 @@ export const GesturesLiveView: React.FC = () => {
         </div>
 
         {cameraError && (
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+          <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs">
             Notice: {cameraError}. Simulated tracking loop active for interface demonstration.
           </div>
         )}
@@ -335,29 +335,29 @@ export const GesturesLiveView: React.FC = () => {
 
       {/* Common Gestures Reference Guide */}
       <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-4 shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/60 pb-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" /> Common Gestures & Spatial Keybindings Reference
+              <Sparkles className="w-4 h-4 text-foreground" /> Common Gestures & Spatial Keybindings Reference
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Standard CPU MediaPipe gesture vocabulary mapped to radial dial and desktop automation
             </p>
           </div>
-          <span className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[10px] font-mono">
+          <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground text-[10px] font-mono">
             6 Core Gestures
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* 1. Pinch */}
-          <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+          <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Pinch (Thumb + Index)
+                  <Zap className="w-3.5 h-3.5 text-foreground" /> Pinch (Thumb + Index)
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-foreground">
                   Select / Click
                 </span>
               </div>
@@ -365,20 +365,20 @@ export const GesturesLiveView: React.FC = () => {
                 Bring tip of thumb (4) and index (8) within Euclidean distance ≤ 0.05. Triggers the currently hovered sector or simulates active mouse click.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+            <div className="mt-3 pt-2 border-t border-border flex items-center justify-between text-[11px] font-mono text-muted-foreground">
               <span>Hysteresis:</span>
               <span className="text-foreground">Release &gt; 0.07</span>
             </div>
           </div>
 
           {/* 2. Pointing Ray */}
-          <div className="p-4 rounded-xl border border-border bg-background/50 flex flex-col justify-between">
+          <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-indigo-400" /> Index Pointing Ray
+                  <Activity className="w-3.5 h-3.5 text-foreground" /> Index Pointing Ray
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-foreground">
                   Dial Angle
                 </span>
               </div>

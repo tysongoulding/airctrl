@@ -50,116 +50,116 @@ export const SettingsHud: React.FC = () => {
       style={{ opacity }}
     >
       {/* Top Header & Global Controls */}
-      <header className="flex items-center justify-between pb-4 border-b border-border/60">
+      <header className="flex items-center justify-between pb-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 text-white">
-            <Zap className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
+            <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              airctrl <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-mono font-medium">v0.2.0</span>
+            <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+              airctrl <span className="text-[11px] px-2 py-0.5 rounded-md bg-muted border border-border text-foreground font-mono font-medium">v0.2.0</span>
             </h1>
             <p className="text-xs text-muted-foreground">Spatial Automation, Offline Whisper STT & CPU Gesture Engine</p>
           </div>
         </div>
 
         {/* Global Controls: Theme Switcher & Opacity Slider */}
-        <div className="flex items-center gap-4 bg-card/80 px-4 py-2 rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-1 bg-background/60 p-1 rounded-lg border border-border/50">
+        <div className="flex items-center gap-4 bg-card px-3 py-1.5 rounded-lg border border-border shadow-sm">
+          <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-md border border-border/40">
             <button
               onClick={() => setTheme("light")}
-              className={`p-1.5 rounded-md transition-colors ${theme === "light" ? "bg-indigo-600 text-white" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1 rounded transition-colors ${theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               title="Light Mode"
             >
-              <Sun className="w-4 h-4" />
+              <Sun className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setTheme("dark")}
-              className={`p-1.5 rounded-md transition-colors ${theme === "dark" ? "bg-indigo-600 text-white" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1 rounded transition-colors ${theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               title="Dark Mode"
             >
-              <Moon className="w-4 h-4" />
+              <Moon className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setTheme("system")}
-              className={`p-1.5 rounded-md transition-colors ${theme === "system" ? "bg-indigo-600 text-white" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1 rounded transition-colors ${theme === "system" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               title="System Mode"
             >
-              <Monitor className="w-4 h-4" />
+              <Monitor className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="h-5 w-[1px] bg-border" />
+          <div className="h-4 w-[1px] bg-border" />
           <OpacitySlider opacity={opacity} onChange={setOpacity} />
         </div>
       </header>
 
       {/* Navigation Tabs (Zero LAN Clutter) */}
-      <nav className="flex items-center gap-2 border-b border-border/60 pb-2 overflow-x-auto">
+      <nav className="flex items-center gap-1.5 border-b border-border pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab("stt")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "stt"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <Mic className="w-4 h-4" /> Speech-to-Text
+          <Mic className="w-3.5 h-3.5" /> Speech-to-Text
         </button>
 
         <button
           onClick={() => setActiveTab("gestures")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "gestures"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <Hand className="w-4 h-4" /> Gestures & Camera
+          <Hand className="w-3.5 h-3.5" /> Gestures & Camera
         </button>
 
         <button
           onClick={() => setActiveTab("dial")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "dial"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <Compass className="w-4 h-4" /> 6-Sector Radial Dial
+          <Compass className="w-3.5 h-3.5" /> 6-Sector Radial Dial
         </button>
 
         <button
           onClick={() => setActiveTab("apps")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "apps"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <List className="w-4 h-4" /> Windows App Catalog
+          <List className="w-3.5 h-3.5" /> Windows App Catalog
         </button>
 
         <button
           onClick={() => setActiveTab("privacy")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "privacy"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <Shield className="w-4 h-4" /> Meeting Privacy
+          <Shield className="w-3.5 h-3.5" /> Meeting Privacy
         </button>
 
         <button
           onClick={() => setActiveTab("status")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
             activeTab === "status"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          <Activity className="w-4 h-4" /> Hardware Telemetry
+          <Activity className="w-3.5 h-3.5" /> Hardware Telemetry
         </button>
       </nav>
 

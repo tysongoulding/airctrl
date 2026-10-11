@@ -77,14 +77,14 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
     <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-6 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <List className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-foreground">
+            <List className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               Windows Application Catalog
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Automatically discovered executables and Start Menu shortcuts ready for radial dial assignment
             </p>
           </div>
@@ -94,7 +94,7 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
           <button
             onClick={refreshApps}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-background hover:bg-muted text-foreground transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition-all disabled:opacity-50 shadow-sm"
             title="Rescan Windows Start Menu & Program Files"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -112,7 +112,7 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search applications by name, executable stem, or category..."
-            className="w-full pl-9 pr-4 py-2 bg-background/80 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-md text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
         <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
@@ -121,8 +121,8 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
       </div>
 
       {launchStatus && (
-        <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs flex items-center gap-2">
-          <Check className="w-4 h-4" /> {launchStatus}
+        <div className="p-3 rounded-md bg-muted border border-border text-foreground text-xs flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-500" /> {launchStatus}
         </div>
       )}
 
@@ -131,14 +131,14 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
         {filteredApps.map((app) => (
           <div
             key={app.id}
-            className="p-4 rounded-xl border border-border bg-background/50 hover:border-indigo-500/40 transition-all flex flex-col justify-between gap-3 group"
+            className="p-4 rounded-lg border border-border bg-card hover:border-foreground/40 transition-all flex flex-col justify-between gap-3 group shadow-sm"
           >
             <div>
               <div className="flex items-start justify-between gap-2">
                 <span className="font-semibold text-xs text-foreground truncate block" title={app.name}>
                   {app.name}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-muted border border-border text-muted-foreground whitespace-nowrap">
                   {app.category}
                 </span>
               </div>
@@ -147,10 +147,10 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
               </p>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
               <button
                 onClick={() => handleLaunch(app.path, app.name)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-medium transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted hover:bg-primary hover:text-primary-foreground text-foreground border border-border text-xs font-medium transition-all"
               >
                 <Play className="w-3 h-3" /> Launch
               </button>
@@ -170,8 +170,8 @@ export const AppCatalogCard: React.FC<Props> = ({ onAssignToSector, sectors }) =
                           justClicked
                             ? "bg-emerald-600 text-white"
                             : isAssigned
-                            ? "bg-indigo-600 text-white"
-                            : "bg-muted hover:bg-indigo-500/20 text-muted-foreground hover:text-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-primary/20 text-muted-foreground hover:text-foreground"
                         }`}
                         title={`Assign to Sector ${sectorId}`}
                       >
