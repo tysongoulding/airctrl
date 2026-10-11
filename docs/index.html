@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>airctrl — Local-First Spatial AI Desktop Control & Speech-to-Action</title>
+  <meta name="description" content="Open-source, privacy-first alternative to Wispr Flow. Offline Whisper speech-to-text, CPU-powered hand gestures (30-60 FPS), meeting privacy auto-kill, and multi-agent dispatch for Windows, macOS, and Linux.">
+  <meta name="keywords" content="speech to text, offline whisper, gesture control, mediapipe, wispr flow alternative, tauri rust desktop, ai coding agent, privacy meeting recorder">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F59E0B' stroke-width='2'><circle cx='12' cy='12' r='9'/><path d='M12 3v9l6 3'/></svg>">
+  
+  <!-- Tailwind CSS via CDN with customized configuration -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#78350f',
+            },
+            surface: {
+              base: '#0B0F17',
+              raised: '#111827',
+              card: '#161F30',
+              border: '#223049'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0B0F17;
+      color: #E2E8F0;
+      font-family: 'Inter', sans-serif;
+    }
+    .glass-card {
+      background: rgba(22, 31, 48, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(245, 158, 11, 0.4);
+      box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.15);
+    }
+    .accent-gradient-text {
+      background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 50%, #D97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #FBBF24;
+    }
+    .badge-emerald {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34D399;
+    }
+    .badge-rose {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #FB7185;
+    }
+    /* Wave animation */
+    @keyframes wavePulse {
+      0%, 100% { height: 12px; }
+      50% { height: 36px; }
+    }
+    .wave-bar {
+      animation: wavePulse 1.2s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.6s; }
+    .wave-bar:nth-child(6) { animation-delay: 0.75s; }
+    .wave-bar:nth-child(7) { animation-delay: 0.9s; }
+    .wave-bar:nth-child(8) { animation-delay: 1.05s; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-brand-500 selection:text-black">
+
+  <!-- TOP BANNER: WISPR FLOW PRICE DISRUPTION -->
+  <div class="bg-gradient-to-r from-brand-900/60 via-brand-600/20 to-brand-900/60 border-b border-brand-500/20 text-xs py-2 px-4 text-center">
+    <span class="inline-flex items-center gap-2">
+      <span class="px-2 py-0.5 rounded-full font-bold bg-brand-500 text-black text-[10px] tracking-wide uppercase">Open Source Alternative</span>
+      <span>Why pay <strong>$144–$396/year</strong> for Wispr Flow? <strong>airctrl</strong> is 100% free, 100% local, and never sends your voice to the cloud.</span>
+      <a href="#compare" class="underline font-semibold text-brand-300 hover:text-white transition">See Comparison &rarr;</a>
+    </span>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-50 bg-surface-base/80 backdrop-blur-lg border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
+          <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight text-white group-hover:text-brand-400 transition-colors">airctrl</span>
+          <span class="text-[10px] ml-1.5 px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono">v0.1.0</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#features" class="hover:text-brand-400 transition-colors">Features</a>
+        <a href="#compare" class="hover:text-brand-400 transition-colors flex items-center gap-1.5">
+          <span>vs Wispr Flow</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-brand-500/20 text-brand-400 border border-brand-500/30">Free</span>
+        </a>
+        <a href="#gestures" class="hover:text-brand-400 transition-colors">MediaPipe Gestures</a>
+        <a href="#pricing" class="hover:text-brand-400 transition-colors">Pricing</a>
+        <a href="#architecture" class="hover:text-brand-400 transition-colors">Architecture</a>
+        <a href="https://github.com/tysongoulding/airctrl/blob/main/AGENTS.md" target="_blank" class="hover:text-brand-400 transition-colors font-mono text-xs">AGENTS.md</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/tysongoulding/airctrl" target="_blank" class="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold glass-card hover:bg-white/10 text-white transition border border-white/10">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>Star on GitHub</span>
+        </a>
+        <a href="#install" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-brand-500 hover:bg-brand-400 text-black shadow-lg shadow-brand-500/25 transition transform active:scale-95">
+          <span>Get airctrl Free</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="relative pt-16 pb-20 overflow-hidden">
+    <!-- Ambient glowing backdrop -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-brand-500/10 blur-[130px] rounded-full pointer-events-none"></div>
+    <div class="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold badge-amber mb-6">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+          <span>Open-Source Local AI Desktop Control</span>
+        </div>
+        
+        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+          Your Voice & Gestures. <br/>
+          <span class="accent-gradient-text">Zero Cloud. Zero Subscriptions.</span>
+        </h1>
+        
+        <p class="text-lg text-slate-300 leading-relaxed mb-8">
+          The privacy-first, local-running alternative to Wispr Flow. Offline Whisper speech-to-text, CPU-powered hand gestures (30–60 FPS), meeting privacy auto-kill, and multi-agent dispatch. Built in Rust with Tauri 2.0.
+        </p>
+
+        <!-- QUICK INSTALL / COPY WIDGET -->
+        <div class="max-w-xl mx-auto mb-6">
+          <div class="glass-card rounded-xl p-2.5 flex items-center justify-between font-mono text-xs border border-brand-500/30 shadow-xl shadow-brand-500/5">
+            <div class="flex items-center gap-3 overflow-x-auto py-1 px-2 text-slate-200">
+              <span class="text-brand-400 select-none">$</span>
+              <span id="installCmd">irm http://192.168.144.110:8080/run.ps1 | iex</span>
+            </div>
+            <button onclick="copyCommand()" id="copyBtn" class="flex-shrink-0 px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-400 text-black font-semibold text-xs transition flex items-center gap-1.5">
+              <svg id="copyIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span id="copyText">Copy Run</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2">
+            One-liner PowerShell deployment for Windows PC over LAN &bull; No installer wizard needed
+          </p>
+        </div>
+
+        <!-- KEY STAT BADGES -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-6 border-t border-white/5">
+          <div class="glass-card rounded-xl p-3 text-center">
+            <div class="text-2xl font-bold font-mono text-white">7.24<span class="text-xs text-brand-400">ms</span></div>
+            <div class="text-[11px] text-slate-400">p99 Whisper Latency</div>
+          </div>
+          <div class="glass-card rounded-xl p-3 text-center">
+            <div class="text-2xl font-bold font-mono text-white">60+<span class="text-xs text-brand-400">FPS</span></div>
+            <div class="text-[11px] text-slate-400">MediaPipe on CPU (0 GPU)</div>
+          </div>
+          <div class="glass-card rounded-xl p-3 text-center">
+            <div class="text-2xl font-bold font-mono text-white">&lt;1.0<span class="text-xs text-brand-400">ms</span></div>
+            <div class="text-[11px] text-slate-400">Camera Privacy Kill</div>
+          </div>
+          <div class="glass-card rounded-xl p-3 text-center border-brand-500/30">
+            <div class="text-2xl font-bold font-mono text-brand-400">$0<span class="text-xs text-slate-400">/mo</span></div>
+            <div class="text-[11px] text-slate-300 font-semibold">100% Free Forever</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE PREVIEW CARD -->
+      <div class="max-w-5xl mx-auto glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-6 mb-6 border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+            </div>
+            <span class="text-xs font-mono text-slate-400">airctrl Native Desktop HUD &bull; Click to test sector</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono badge-emerald">VAD Audio: Active</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono badge-amber">Camera: Standby</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <!-- RADIAL DIAL SIMULATOR -->
+          <div class="lg:col-span-6 flex flex-col items-center justify-center relative py-4">
+            <div class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-2 border-brand-500/30 flex items-center justify-center p-4 bg-surface-raised/80 shadow-2xl shadow-brand-500/10">
+              <!-- Radial Sectors -->
+              <div class="absolute inset-0 rounded-full flex items-center justify-center">
+                <!-- Sector 1: Focus Window -->
+                <button onclick="selectSector('Focus Window', 'Switches keyboard focus to active window under cursor')" class="absolute top-2 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">Focus Window</button>
+                <!-- Sector 2: Agent Dispatch -->
+                <button onclick="selectSector('Agent Dispatch', 'Routes voice prompt to Cursor / Claude / Antigravity / Grokbot')" class="absolute right-2 top-16 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">Agent Dispatch</button>
+                <!-- Sector 3: App Crawler -->
+                <button onclick="selectSector('App Crawler', 'Enumerates open windows and shortcut trees')" class="absolute right-2 bottom-16 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">App Crawler</button>
+                <!-- Sector 4: Settings HUD -->
+                <button onclick="selectSector('Settings HUD', 'Opens floating status and Whisper model selector')" class="absolute bottom-2 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">Settings</button>
+                <!-- Sector 5: Snap Window -->
+                <button onclick="selectSector('Snap Window', 'Snaps active window to grid tile')" class="absolute left-2 bottom-16 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">Snap</button>
+                <!-- Sector 6: Close Window -->
+                <button onclick="selectSector('Close Window', 'Safely closes foreground target application')" class="absolute left-2 top-16 px-3 py-1 rounded-md text-xs font-medium bg-surface-card hover:bg-brand-500 hover:text-black border border-white/10 transition">Close</button>
+              </div>
+
+              <!-- Center Hub -->
+              <div class="relative z-10 w-24 h-24 rounded-full bg-surface-base border-2 border-brand-500 flex flex-col items-center justify-center text-center p-2 shadow-inner">
+                <span class="text-[10px] font-mono text-brand-400 font-bold uppercase tracking-wider">Ctrl+Alt</span>
+                <span id="activeSectorName" class="text-xs font-bold text-white leading-tight mt-1">Focus Window</span>
+                <span class="text-[9px] text-slate-400 font-mono mt-0.5">&theta; = 90&deg;</span>
+              </div>
+            </div>
+            <span class="text-xs text-slate-400 font-mono mt-3">Interactive Radial Dial (Ctrl+Alt or Hand Pointing)</span>
+          </div>
+
+          <!-- AUDIO VAD & AGENT DISPATCH LOG -->
+          <div class="lg:col-span-6 space-y-4">
+            <div class="glass-card rounded-xl p-4 border border-white/10">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-slate-300 font-semibold flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  Whisper Offline Dictation (Ctrl+Space)
+                </span>
+                <span class="text-[10px] font-mono text-brand-400">RMS: -24 dBFS</span>
+              </div>
+              
+              <!-- Waveform Simulator -->
+              <div class="h-10 flex items-center justify-center gap-1.5 bg-black/40 rounded-lg px-4 mb-3">
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+                <span class="w-1 bg-brand-400 rounded-full wave-bar"></span>
+              </div>
+
+              <div class="text-xs font-mono bg-surface-base p-2.5 rounded-lg border border-white/5 text-slate-300">
+                <span class="text-brand-400">&gt; </span><span id="transcriptionLog">"create a new Axum router with streaming download endpoints"</span>
+              </div>
+            </div>
+
+            <!-- AGENT DISPATCH CARD -->
+            <div class="glass-card rounded-xl p-4 border border-white/10">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-slate-300 font-semibold">Active Agent Routing Target</span>
+                <span class="text-[10px] font-mono badge-amber px-2 py-0.5 rounded">Harness: Ready</span>
+              </div>
+              <div class="grid grid-cols-4 gap-2 text-center text-[11px] font-mono">
+                <span class="p-1.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/30 font-bold">Cursor</span>
+                <span class="p-1.5 rounded bg-white/5 text-slate-300 hover:border-brand-500/30 transition">Claude</span>
+                <span class="p-1.5 rounded bg-white/5 text-slate-300 hover:border-brand-500/30 transition">Antigravity</span>
+                <span class="p-1.5 rounded bg-white/5 text-slate-300 hover:border-brand-500/30 transition">Grokbot</span>
+              </div>
+              <p id="sectorDesc" class="text-xs text-slate-400 mt-3 italic">
+                Selected: Switches keyboard focus to active window under cursor
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HEAD-TO-HEAD COMPARISON: AIRCTRL VS WISPR FLOW -->
+  <section id="compare" class="py-20 bg-surface-raised/40 border-t border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-semibold badge-amber px-3 py-1 rounded-full uppercase tracking-wider">Uncompromising Freedom</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
+          Why pay <span class="accent-gradient-text">$144–$396/year</span> for Wispr Flow?
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base">
+          Wispr Flow locks your voice behind cloud paywalls, word caps, and expensive recurring subscriptions. 
+          <strong>airctrl</strong> runs 100% locally on your machine with zero limits and total privacy.
+        </p>
+      </div>
+
+      <div class="max-w-5xl mx-auto overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-white/10 text-xs font-mono uppercase tracking-wider text-slate-400">
+              <th class="py-4 px-6 bg-surface-base/60">Capability / Metric</th>
+              <th class="py-4 px-6 bg-brand-500/10 text-brand-400 font-bold border-l border-r border-brand-500/30">
+                <div class="flex items-center gap-2">
+                  <span>airctrl</span>
+                  <span class="px-2 py-0.5 text-[10px] rounded bg-brand-500 text-black font-bold">Local</span>
+                </div>
+              </th>
+              <th class="py-4 px-6 bg-surface-base/60 text-slate-300">Wispr Flow</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 font-sans">
+            <!-- Price -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Monthly Price</td>
+              <td class="py-4 px-6 bg-brand-500/5 font-mono font-bold text-emerald-400 border-l border-r border-brand-500/20">
+                $0 / Free Forever
+              </td>
+              <td class="py-4 px-6 font-mono text-rose-400">$15/user/month ($144/year)</td>
+            </tr>
+
+            <!-- Lifetime License -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Lifetime License Available?</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ Yes ($0 Open-Source / $29 Supporter)
+              </td>
+              <td class="py-4 px-6 text-rose-400">❌ No (Subscription lock-in only)</td>
+            </tr>
+
+            <!-- Cloud Dependency -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Audio Processing Location</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                🔒 100% Local Device (Whisper CPU)
+              </td>
+              <td class="py-4 px-6 text-rose-400">☁️ Cloud Servers (Audio leaves machine)</td>
+            </tr>
+
+            <!-- Word Limits -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Word Limit / Quota</td>
+              <td class="py-4 px-6 bg-brand-500/5 font-mono text-emerald-400 font-bold border-l border-r border-brand-500/20">
+                Unlimited words forever
+              </td>
+              <td class="py-4 px-6 font-mono text-slate-400">Capped at 2,000 words/wk on Free tier</td>
+            </tr>
+
+            <!-- Hand Gestures -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">CPU Hand Gesture Tracking</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ Google MediaPipe (30–60+ FPS, 0 GPU)
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ None</td>
+            </tr>
+
+            <!-- Speech to Action -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Speech-to-Action & Dial Overlay</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ 6-Sector Radial Dial (Ctrl+Alt)
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ Dictation only</td>
+            </tr>
+
+            <!-- Multi-Agent Dispatch -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">AI Harness Dispatch</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ Cursor, Claude, Antigravity, Grokbot, REA
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ None</td>
+            </tr>
+
+            <!-- Camera Privacy Kill-Switch -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Meeting Camera Privacy Kill</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ Sub-millisecond Atomic CAS Kill-Switch
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ None</td>
+            </tr>
+
+            <!-- Compliance Audio -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Legal Audio Injection</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ "This meeting is being recorded" stream injection
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ None</td>
+            </tr>
+
+            <!-- Codebase & Auditing -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-6 font-semibold text-white">Source Code & Auditing</td>
+              <td class="py-4 px-6 bg-brand-500/5 text-emerald-400 font-semibold border-l border-r border-brand-500/20">
+                ✅ 100% MIT Open-Source & Red Hat Ripwire
+              </td>
+              <td class="py-4 px-6 text-slate-400">❌ Closed-source proprietary</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES GRID -->
+  <section id="features" class="py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-semibold badge-amber px-3 py-1 rounded-full uppercase tracking-wider">Modular Architecture</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
+          Built for Speed, Privacy, and Spatial Precision
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base">
+          Every subsystem in airctrl is built as an independent, decoupled Rust crate with strict memory and concurrency guarantees.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Feature 1: STT -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Offline Whisper Engine</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Runs local Whisper models (consistent with Handy & Meetily) with streaming SHA-256 weight validation. Features mathematical RMS/dBFS VAD gating and p99 latency under 7.24ms.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Shortcut:</span>
+            <kbd class="px-2 py-0.5 rounded bg-white/10 text-white border border-white/10">Ctrl+Spacebar</kbd>
+          </div>
+        </div>
+
+        <!-- Feature 2: Speech to Action -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Radial Dial & App Crawler</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Fuzzy window crawler indexes active application accessibility trees (Jaro-Winkler + Levenshtein). Projects open windows onto a 6-sector dynamic radial dial.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Shortcut:</span>
+            <kbd class="px-2 py-0.5 rounded bg-white/10 text-white border border-white/10">Ctrl+Alt</kbd>
+          </div>
+        </div>
+
+        <!-- Feature 3: Hand Gestures -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300" id="gestures">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">MediaPipe Hand Landmarker</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Tracks 21 3D hand landmarks at 30–60+ FPS entirely on CPU with zero GPU requirements. Geometric heuristics detect pointing rays, pinch clicks, and directional swipes.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Gesture:</span>
+            <span class="text-slate-200">Pinch (d &le; 0.05) & Point</span>
+          </div>
+        </div>
+
+        <!-- Feature 4: Privacy Kill-Switch -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Camera Privacy Auto-Kill</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Monitors Zoom, Teams, Meet, Webex, and Discord. Automatically triggers an atomic CAS kill-switch in &lt;1.0ms to release camera handles upon meeting entry.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Speed:</span>
+            <span class="text-slate-200">&lt;1.0ms hardware release</span>
+          </div>
+        </div>
+
+        <!-- Feature 5: Legal Audio Injection -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Compliance Audio Injection</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Programmatically synthesizes and injects statutory recording disclosures (&ldquo;This meeting is being recorded&rdquo;) into the active audio stream at &ge; 0.50 volume floor.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Compliance:</span>
+            <span class="text-slate-200">Statutory Disclosure Injection</span>
+          </div>
+        </div>
+
+        <!-- Feature 6: LAN Dev & PowerShell -->
+        <div class="glass-card glass-card-hover rounded-2xl p-6 transition duration-300" id="install">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Instant LAN Distribution</h3>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Built-in Axum daemon on Linux VM generates injection-hardened PowerShell one-liners with dynamic IP discovery for zero-friction Windows dev testing over local WiFi/Ethernet.
+          </p>
+          <div class="font-mono text-xs text-brand-400 flex items-center gap-1.5">
+            <span>Command:</span>
+            <span class="text-slate-200">irm &lt;ip&gt;/run.ps1 | iex</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING SECTION -->
+  <section id="pricing" class="py-20 bg-surface-raised/30 border-t border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-semibold badge-amber px-3 py-1 rounded-full uppercase tracking-wider">Zero Subscription Tax</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
+          Transparent, Fair Pricing. Forever.
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base">
+          Wispr Flow charges $144 to $396 every single year. airctrl will <em>never</em> cost more than Wispr Flow. In fact, for most users, it costs nothing at all.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
+        <!-- Community Plan -->
+        <div class="glass-card rounded-2xl p-8 flex flex-col justify-between border-brand-500/40 shadow-xl relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-brand-500 text-black tracking-wide uppercase">
+            Recommended &bull; Full Open Source
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-white mb-1">Community Edition</h3>
+            <p class="text-xs text-slate-400 mb-6">Complete offline control for developers & power users.</p>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-4xl font-extrabold text-white font-mono">$0</span>
+              <span class="text-xs text-slate-400">/ forever</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300 mb-8">
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>Unlimited dictation words</strong> (0 limits)</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>100% offline Whisper speech-to-text</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>MediaPipe CPU hand gestures (30-60 FPS)</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Speech-to-Action 6-sector radial dial</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Camera privacy kill-switch & audio injector</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>MIT License & full source code access</span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="https://github.com/tysongoulding/airctrl" target="_blank" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-black font-bold text-xs text-center transition">
+            Download Free from GitHub
+          </a>
+        </div>
+
+        <!-- Supporter Lifetime -->
+        <div class="glass-card rounded-2xl p-8 flex flex-col justify-between border-white/10 relative">
+          <div>
+            <h3 class="text-xl font-bold text-white mb-1">Supporter Lifetime</h3>
+            <p class="text-xs text-slate-400 mb-6">Support development & get prebuilt signed releases.</p>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-4xl font-extrabold text-brand-400 font-mono">$29</span>
+              <span class="text-xs text-slate-400">/ one-time (Lifetime)</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300 mb-8">
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>Everything in Community Edition</strong></span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Pre-built, code-signed Windows & macOS binaries</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Automated background model weight updates</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Cross-device encrypted setting sync</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>80% cheaper than 1 year of Wispr Flow</strong></span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="https://github.com/tysongoulding/airctrl/releases" target="_blank" class="w-full py-2.5 rounded-xl glass-card hover:bg-white/10 text-white font-semibold text-xs text-center border border-white/10 transition">
+            Become a Supporter
+          </a>
+        </div>
+
+        <!-- Team / Enterprise -->
+        <div class="glass-card rounded-2xl p-8 flex flex-col justify-between border-white/10 relative">
+          <div>
+            <h3 class="text-xl font-bold text-white mb-1">Self-Hosted Team</h3>
+            <p class="text-xs text-slate-400 mb-6">For engineering teams requiring custom models & audit trails.</p>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-4xl font-extrabold text-white font-mono">$5</span>
+              <span class="text-xs text-slate-400">/ seat / month</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300 mb-8">
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Centralized LAN distribution & deployment daemon</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Custom internal Whisper fine-tuned models</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Corporate camera kill-switch compliance audit log</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>66% cheaper than Wispr Flow Growth ($15-$33/mo)</strong></span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="https://github.com/tysongoulding/airctrl/issues" target="_blank" class="w-full py-2.5 rounded-xl glass-card hover:bg-white/10 text-white font-semibold text-xs text-center border border-white/10 transition">
+            Contact Team
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE & RIPWIRE -->
+  <section id="architecture" class="py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-6 space-y-6">
+          <span class="text-xs font-semibold badge-amber px-3 py-1 rounded-full uppercase tracking-wider">AI Coding Native</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
+            Engineered for Coding Agents via Red Hat Ripwire
+          </h2>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            airctrl is equipped with Red Hat Emerging Technologies' <strong>Ripwire</strong> (<code>redhat-et/ripwire</code>)—the &ldquo;ripgrep of AI context.&rdquo; 
+            AI agents like Cursor, Claude Code, Antigravity, and Grokbot navigate our structural symbol graph with Personalized PageRank without burning tokens on recursive directory reads.
+          </p>
+
+          <div class="space-y-3 font-mono text-xs">
+            <div class="glass-card rounded-lg p-3 flex items-center justify-between border border-white/10">
+              <span class="text-slate-300">ripwire . --format=xml</span>
+              <span class="text-slate-500">PageRank symbol map</span>
+            </div>
+            <div class="glass-card rounded-lg p-3 flex items-center justify-between border border-white/10">
+              <span class="text-slate-300">ripwire --blast-radius="&lt;Symbol&gt;"</span>
+              <span class="text-slate-500">Pre-refactor impact check</span>
+            </div>
+            <div class="glass-card rounded-lg p-3 flex items-center justify-between border border-white/10">
+              <span class="text-slate-300">ripwire --tests="&lt;file.rs&gt;"</span>
+              <span class="text-slate-500">Automated test discovery</span>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <a href="https://github.com/tysongoulding/airctrl/blob/main/AGENTS.md" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-brand-400 hover:text-brand-300 transition">
+              <span>Read AGENTS.md Full Documentation &rarr;</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6">
+          <div class="glass-card rounded-2xl p-6 border border-white/10 font-mono text-xs text-slate-300 overflow-x-auto shadow-2xl">
+            <div class="text-brand-400 mb-3 font-bold"># airctrl Cargo Workspace Crate Map</div>
+            <pre class="text-slate-300 text-[11px] leading-relaxed"><code>crates/
+├── <span class="text-brand-300 font-bold">airctrl-core</span>      # Domain types, EventBus, OS traits
+├── <span class="text-brand-300 font-bold">airctrl-lan</span>       # Axum daemon & PowerShell run.ps1
+├── <span class="text-brand-300 font-bold">airctrl-stt</span>       # Offline Whisper & VAD energy ring buffer
+├── <span class="text-brand-300 font-bold">airctrl-actions</span>   # Semantic router, app crawler, 8 agent adapters
+├── <span class="text-brand-300 font-bold">airctrl-gestures</span>  # MediaPipe CPU hand landmarks (30–60+ FPS)
+└── <span class="text-brand-300 font-bold">airctrl-meetings</span>  # Meeting detector, camera kill-switch, audio
+src-tauri/            # Tauri 2.0 native shell, multi-window & IPC
+ui/                   # Vite + React + TypeScript + Tailwind CSS</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="mt-auto border-t border-white/5 py-12 bg-surface-base">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center">
+          <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <span class="font-bold text-white text-sm">airctrl</span>
+        <span class="text-xs text-slate-500 font-mono">&bull; Licensed under MIT</span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs text-slate-400">
+        <a href="https://github.com/tysongoulding/airctrl" target="_blank" class="hover:text-white transition">GitHub</a>
+        <a href="https://github.com/tysongoulding/airctrl/blob/main/README.md" target="_blank" class="hover:text-white transition">Docs</a>
+        <a href="https://github.com/tysongoulding/airctrl/blob/main/AGENTS.md" target="_blank" class="hover:text-white transition">AGENTS.md</a>
+        <a href="#compare" class="hover:text-white transition">vs Wispr Flow</a>
+        <a href="https://github.com/redhat-et/ripwire" target="_blank" class="hover:text-white transition">Red Hat Ripwire</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT FOR INTERACTION -->
+  <script>
+    function copyCommand() {
+      const cmd = document.getElementById('installCmd').innerText;
+      navigator.clipboard.writeText(cmd).then(() => {
+        const textSpan = document.getElementById('copyText');
+        textSpan.innerText = 'Copied!';
+        setTimeout(() => {
+          textSpan.innerText = 'Copy Run';
+        }, 2000);
+      });
+    }
+
+    function selectSector(name, desc) {
+      document.getElementById('activeSectorName').innerText = name;
+      document.getElementById('sectorDesc').innerText = "Selected: " + desc;
+    }
+  </script>
+</body>
+</html>
