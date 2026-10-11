@@ -11,6 +11,16 @@ fn main() {
     let bridge = IpcBridge::new(app_state);
 
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+            Ok(())
+        })
         .manage(bridge)
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,

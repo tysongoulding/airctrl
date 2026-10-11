@@ -5,7 +5,6 @@
   "identifier": "com.tysongoulding.airctrl",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://127.0.0.1:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../ui/dist"
   },
@@ -25,7 +24,8 @@
         "transparent": false,
         "backgroundColor": "#121113",
         "devtools": true,
-        "visible": true
+        "visible": true,
+        "url": "index.html"
       },
       {
         "label": "radial-overlay",
@@ -50,7 +50,7 @@
       "menuOnLeftClick": false
     },
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* ws://localhost:*;"
+      "csp": null
     }
   },
   "bundle": {
