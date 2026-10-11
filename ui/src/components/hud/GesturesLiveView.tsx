@@ -166,7 +166,7 @@ export const GesturesLiveView: React.FC = () => {
 
     // Draw Skeleton Bones
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(99, 102, 241, 0.75)"; // Indigo-500
+    ctx.strokeStyle = "rgba(216, 121, 67, 0.75)"; // Qrafthive Clay Orange (#d87943)
     for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
       const p1 = landmarks[startIdx];
       const p2 = landmarks[endIdx];
@@ -179,7 +179,7 @@ export const GesturesLiveView: React.FC = () => {
     // Draw Pointing Vector Ray
     const pIndex = landmarks[8];
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(244, 63, 94, 0.85)"; // Rose-500
+    ctx.strokeStyle = "rgba(82, 117, 117, 0.85)"; // Qrafthive Muted Teal (#527575)
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(pIndex.x, pIndex.y);
@@ -193,7 +193,7 @@ export const GesturesLiveView: React.FC = () => {
       const isTip = [4, 8, 12, 16, 20].includes(i);
       ctx.beginPath();
       ctx.arc(p.x, p.y, isTip ? 6 : 4, 0, 2 * Math.PI);
-      ctx.fillStyle = isTip ? "#38bdf8" : "#818cf8"; // Sky-400 or Indigo-400
+      ctx.fillStyle = isTip ? "#d87943" : "#527575"; // Clay orange tips, muted teal joints
       ctx.fill();
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5;
