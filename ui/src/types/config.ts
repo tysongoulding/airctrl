@@ -19,6 +19,10 @@ export interface SettingsState {
   whisper_model: string; // "models/ggml-tiny.en.bin"
 
   // Speech-to-Action & Gestures
+  hotkey_sta?: string; // "Ctrl+Shift+Space"
+  sta_agent_target?: string; // "cursor" | "claude" | "antigravity" | "grok"
+  sta_fuzzy_threshold?: number; // 0.75
+  sta_acronym_boost?: boolean; // true
   hotkey_dial: string; // "Ctrl+Spacebar" or "Ctrl+Alt"
   radial_dial_sectors: number; // 6 (bounds: 4..8)
   gesture_fps_target: number; // 30
@@ -63,7 +67,11 @@ export const DEFAULT_DIAL_SECTORS: DialSectorDefinition[] = [
 
 export const DEFAULT_SETTINGS: SettingsState = {
   hotkey_stt: "Ctrl+Win",
+  hotkey_sta: "Ctrl+Shift+Space",
   hotkey_dial: "Ctrl+Spacebar",
+  sta_agent_target: "cursor",
+  sta_fuzzy_threshold: 0.75,
+  sta_acronym_boost: true,
   push_to_talk: true,
   whisper_model: "models/ggml-tiny.en.bin",
   radial_dial_sectors: 6,
