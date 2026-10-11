@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sliders, Layout, Hand, Compass, CheckCircle2 } from "lucide-react";
+import { Layout, Hand, Compass } from "lucide-react";
 import { SettingsState, DEFAULT_DIAL_SECTORS } from "../../types/config";
 import { RadialIcon } from "../radial/RadialIcons";
 import { RADIAL_DIAL_CONFIG } from "../radial/types";
