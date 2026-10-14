@@ -27,6 +27,7 @@ export async function invokeCommand<T = any>(cmd: string, args?: Record<string, 
 }
 
 export const tauriApi = {
+  // Core & Recording
   startRecording: (args?: any) => invokeCommand<{ status: string }>("startRecording", args),
   stopRecording: (args?: any) => invokeCommand<{ status: string; text: string }>("stopRecording", args),
   triggerAction: (action: string, params?: any) =>
@@ -43,4 +44,52 @@ export const tauriApi = {
   refreshCatalogedApps: () => invokeCommand<{ apps: import("../types/config").ApplicationItem[] }>("refreshCatalogedApps"),
   launchApp: (path: string) => invokeCommand<{ success: boolean; pid: number }>("launchApp", { path }),
   injectText: (text: string) => invokeCommand<{ success: boolean; text_length: number }>("injectText", { text }),
+
+  // R1: Handy Parity Commands
+  listModels: () => invokeCommand("listModels"),
+  selectModel: (model_id: string) => invokeCommand("selectModel", { model_id }),
+  setRecordingMode: (mode: string) => invokeCommand("setRecordingMode", { mode }),
+  getRecordingMode: () => invokeCommand("getRecordingMode"),
+  setOverlayPosition: (position: string) => invokeCommand("setOverlayPosition", { position }),
+  getOverlayPosition: () => invokeCommand("getOverlayPosition"),
+  updateDictionary: (entries: Record<string, string>) => invokeCommand("updateDictionary", { entries }),
+  getDictionary: () => invokeCommand("getDictionary"),
+  togglePostProcessing: (enabled?: boolean) => invokeCommand("togglePostProcessing", enabled !== undefined ? { enabled } : {}),
+  searchTranscripts: (query: string) => invokeCommand("searchTranscripts", { query }),
+  clearTranscripts: () => invokeCommand("clearTranscripts"),
+  toggleDebugDrawer: () => invokeCommand("toggleDebugDrawer"),
+  getDebugDrawerStatus: () => invokeCommand("getDebugDrawerStatus"),
+
+  // R2: Speech-to-Action 100% Hands-Free Commands
+  executeVoiceCommand: (command: string) => invokeCommand("executeVoiceCommand", { command }),
+  snapWindow: (direction: string) => invokeCommand("snapWindow", { direction }),
+  resizeWindow: (args: { mode: string; value?: string; width?: number; height?: number; percent?: number }) =>
+    invokeCommand("resizeWindow", args),
+  cycleWindow: (direction: "next" | "previous") => invokeCommand("cycleWindow", { direction }),
+  navigateUi: (action: string, direction?: string, amount?: number) =>
+    invokeCommand("navigateUi", { action, direction, amount }),
+
+  // R3: Meetily 1:1 Parity Commands
+  getMixerStatus: () => invokeCommand("getMixerStatus"),
+  startMeetingRecording: (title?: string, platform?: string) =>
+    invokeCommand("startMeetingRecording", { title, platform }),
+  stopMeetingRecording: () => invokeCommand("stopMeetingRecording"),
+  importAndEnhanceAudio: (file_path: string, model?: string, language?: string) =>
+    invokeCommand("importAndEnhanceAudio", { file_path, model, language }),
+  generateSummary: (args: { provider: string; model?: string; template?: string; endpoint?: string; transcript?: string }) =>
+    invokeCommand("generateSummary", args),
+  exportSummary: (args: { format: "markdown" | "pdf" | "docx"; meeting_id?: string; title?: string; content?: string }) =>
+    invokeCommand("exportSummary", args),
+  getMeetingArchive: (query?: string) => invokeCommand("getMeetingArchive", query ? { query } : {}),
+  seekAudioOffset: (meeting_id: string, timestamp_ms: number) =>
+    invokeCommand("seekAudioOffset", { meeting_id, timestamp_ms }),
+
+  // R4: Google MediaPipe & Persistent Virtual Camera Splitter Commands
+  getGestureEngineStatus: () => invokeCommand("getGestureEngineStatus"),
+  setGestureTrackingMode: (mode: "SingleHand" | "DualHand", sensitivity?: number, cooldown_ms?: number) =>
+    invokeCommand("setGestureTrackingMode", { mode, sensitivity, cooldown_ms }),
+  getVirtualCameraStatus: () => invokeCommand("getVirtualCameraStatus"),
+  setVirtualCameraPrivacy: (privacy_muted: boolean, mute_both?: boolean) =>
+    invokeCommand("setVirtualCameraPrivacy", { privacy_muted, mute_both: mute_both ?? false }),
+  getMultiHandGestureStatus: () => invokeCommand("getMultiHandGestureStatus"),
 };

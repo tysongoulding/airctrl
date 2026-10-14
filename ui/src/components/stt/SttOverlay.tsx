@@ -8,7 +8,7 @@ export type SttOverlayState = "idle" | "recording" | "transcribing" | "done" | "
 interface Props {
   onClose?: () => void;
   standalone?: boolean;
-  position?: "bottom" | "top";
+  position?: "bottom" | "top" | "center" | "none";
   soundEnabled?: boolean;
 }
 

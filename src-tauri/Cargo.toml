@@ -34,7 +34,7 @@ parking_lot = "0.12"
 chrono = { workspace = true }
 
 # Tauri 2.0 dependencies
-tauri = { version = "2.0", default-features = false, features = ["wry", "tray-icon", "devtools"] }
+tauri = { version = "2.0", default-features = false, features = ["wry", "tray-icon", "devtools", "custom-protocol"] }
 
 [build-dependencies]
 tauri-build = { version = "2.0", default-features = false }

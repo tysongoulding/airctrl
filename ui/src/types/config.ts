@@ -18,16 +18,21 @@ export interface SettingsState {
   hotkey_stt: string; // "Ctrl+Win" or "Ctrl+Spacebar"
   push_to_talk: boolean; // true = push-to-talk, false = toggle
   whisper_model: string; // "models/ggml-tiny.en.bin"
-  stt_mode?: "smart_dual" | "push_to_talk" | "toggle";
-  stt_overlay_position?: "bottom" | "top";
+  stt_mode?: "smart_dual" | "push_to_talk" | "toggle" | "continuous";
+  stt_overlay_position?: "bottom" | "top" | "center" | "none";
   stt_audio_cues?: boolean;
   stt_auto_paste?: boolean;
+  stt_reliable_paste?: boolean;
+  stt_paste_delay_before_ms?: number;
+  stt_paste_delay_after_ms?: number;
+  stt_post_process?: boolean;
 
   // Speech-to-Action & Gestures
-  hotkey_sta?: string; // "Ctrl+Shift+Space"
+  hotkey_sta?: string; // "Ctrl+Spacebar" or "Ctrl+Shift+Space"
   sta_agent_target?: string; // "cursor" | "claude" | "antigravity" | "grok"
   sta_fuzzy_threshold?: number; // 0.75
   sta_acronym_boost?: boolean; // true
+  sta_continuous_wake?: boolean; // true
   hotkey_dial: string; // "Ctrl+Spacebar" or "Ctrl+Alt"
   radial_dial_sectors: number; // 6 (bounds: 4..8)
   gesture_fps_target: number; // 30
@@ -35,9 +40,14 @@ export interface SettingsState {
   angular_hysteresis: number; // 0.05
   dial_timeout_secs: number; // 3.0
 
-  // Meeting Privacy Controls
-  camera_auto_kill: boolean; // true
+  // Meeting Privacy Controls, Meetily & Virtual Camera Splitter
+  camera_auto_kill: boolean; // false when virtual camera splitter active
   compliance_audio_enabled: boolean; // true
+  virtual_camera_enabled?: boolean; // true ("AirCtrl Virtual Camera")
+  virtual_camera_privacy_mute?: boolean; // false
+  meetily_provider?: "ollama" | "claude" | "groq" | "openrouter" | "custom_openai";
+  meetily_model?: string;
+  meetily_endpoint?: string;
 
   // Configured Sectors (0 to 5)
   dial_sectors?: DialSectorDefinition[];

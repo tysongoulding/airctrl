@@ -252,6 +252,53 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
               </div>
             </div>
 
+            {/* 100% Hands-Free Window Sizing, 9-Way Snap & Keyboardless UI Focus Bar */}
+            <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col gap-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-foreground">
+                    100% Hands-Free Window Sizing, 9-Way Snap &amp; Focus Navigation
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground">
+                    Wake prefixes: <code>&quot;hey airctrl&quot;</code>, <code>&quot;airctrl&quot;</code>, <code>&quot;computer&quot;</code> — control everything without a mouse or keyboard
+                  </p>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Zero Mouse / Keyboard Required
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "snap window left",
+                  "snap window right",
+                  "maximize window",
+                  "minimize window",
+                  "center window",
+                  "make window larger",
+                  "make window smaller",
+                  "resize window 80 percent",
+                  "resize 1280 by 720",
+                  "next window",
+                  "previous window",
+                  "next field",
+                  "press enter",
+                  "scroll down",
+                  "double click",
+                ].map((voiceCmd) => (
+                  <button
+                    key={voiceCmd}
+                    onClick={() => {
+                      setTestCommand(voiceCmd);
+                      handleTestDispatch(voiceCmd);
+                    }}
+                    className="px-2.5 py-1 rounded-md bg-[#1f1d21] hover:bg-[#d87943] hover:text-white border border-border text-[11px] font-mono text-foreground transition-all"
+                  >
+                    &ldquo;{voiceCmd}&rdquo;
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Dispatch Result Notice */}
             {dispatchResult && (
               <div
