@@ -101,7 +101,7 @@ impl Default for AudioStreamConfig {
     }
 }
 
-/// Configuration for active window text injection.
+/// Configuration for active window text injection and Reliable Paste.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextInjectionConfig {
     /// Text lengths exceeding this threshold immediately bypass typing and use clipboard paste.
@@ -111,6 +111,20 @@ pub struct TextInjectionConfig {
     /// Delay after refocusing window to allow OS message loop to update focus (milliseconds).
     /// Default: 30 ms.
     pub refocus_settle_delay_ms: u64,
+
+    /// Whether Reliable Paste is enabled (preserves and restores clipboard content).
+    /// Default: true (Handy default).
+    pub reliable_paste: bool,
+
+    /// Delay after target window focus before typing or pasting (milliseconds).
+    /// Allows window message loop and caret to settle.
+    /// Default: 30 ms (Handy default).
+    pub paste_delay_before_ms: u64,
+
+    /// Delay after paste keystroke before restoring original clipboard content (milliseconds).
+    /// Ensures target application has fully consumed clipboard contents.
+    /// Default: 50 ms (Handy default).
+    pub paste_delay_after_ms: u64,
 }
 
 impl Default for TextInjectionConfig {
@@ -118,6 +132,9 @@ impl Default for TextInjectionConfig {
         Self {
             clipboard_fallback_threshold: 200,
             refocus_settle_delay_ms: 30,
+            reliable_paste: true,
+            paste_delay_before_ms: 30,
+            paste_delay_after_ms: 50,
         }
     }
 }

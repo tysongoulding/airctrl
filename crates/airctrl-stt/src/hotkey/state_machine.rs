@@ -82,7 +82,7 @@ impl HotkeyStateMachine {
         active_window_id: Option<u64>,
     ) -> StateTransitionResult {
         match self.mode {
-            HotkeyMode::PushToTalk => {
+            HotkeyMode::PushToTalk | HotkeyMode::HoldOnly => {
                 if self.state == SpeechState::Idle {
                     let from = self.state.clone();
                     let to = SpeechState::Listening;
@@ -102,7 +102,7 @@ impl HotkeyStateMachine {
                     StateTransitionResult::NoChange
                 }
             }
-            HotkeyMode::Toggle => match self.state {
+            HotkeyMode::Toggle | HotkeyMode::ToggleOnly => match self.state {
                 SpeechState::Idle => {
                     let from = self.state.clone();
                     let to = SpeechState::Listening;
@@ -133,7 +133,38 @@ impl HotkeyStateMachine {
                 }
                 _ => StateTransitionResult::NoChange,
             },
-            HotkeyMode::SmartDual => match self.state {
+            HotkeyMode::SmartDual | HotkeyMode::SmartDualMode => match self.state {
+                SpeechState::Idle => {
+                    let from = self.state.clone();
+                    let to = SpeechState::Listening;
+                    self.state = to.clone();
+                    self.press_start_time_ms = timestamp_ms;
+                    self.target_window_id = active_window_id;
+                    self.publish_state_changed(&to);
+
+                    StateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        action: StateMachineAction::StartRecording {
+                            target_window_id: active_window_id,
+                        },
+                    }
+                }
+                SpeechState::Listening => {
+                    let from = self.state.clone();
+                    let to = SpeechState::Transcribing;
+                    self.state = to.clone();
+                    self.publish_state_changed(&to);
+
+                    StateTransitionResult::Transitioned {
+                        from,
+                        to,
+                        action: StateMachineAction::StopRecordingAndTranscribe,
+                    }
+                }
+                _ => StateTransitionResult::NoChange,
+            },
+            HotkeyMode::ContinuousHandsFree => match self.state {
                 SpeechState::Idle => {
                     let from = self.state.clone();
                     let to = SpeechState::Listening;
@@ -170,7 +201,7 @@ impl HotkeyStateMachine {
     /// Handles key-up event (`Ctrl+Spacebar` released).
     pub fn on_key_up(&mut self, timestamp_ms: u64) -> StateTransitionResult {
         match self.mode {
-            HotkeyMode::PushToTalk => {
+            HotkeyMode::PushToTalk | HotkeyMode::HoldOnly => {
                 if self.state == SpeechState::Listening {
                     let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
                     if duration < self.min_press_duration_ms {
@@ -203,8 +234,8 @@ impl HotkeyStateMachine {
                     StateTransitionResult::NoChange
                 }
             }
-            HotkeyMode::Toggle => StateTransitionResult::NoChange,
-            HotkeyMode::SmartDual => {
+            HotkeyMode::Toggle | HotkeyMode::ToggleOnly => StateTransitionResult::NoChange,
+            HotkeyMode::SmartDual | HotkeyMode::SmartDualMode => {
                 if self.state == SpeechState::Listening {
                     let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
                     if duration >= 250 {
@@ -233,13 +264,77 @@ impl HotkeyStateMachine {
                             action: StateMachineAction::CancelRecordingDiscardBuffer,
                         }
                     } else {
-                        // Quick tap (< 250ms): latched into toggle mode, stay listening!
+                        // Quick tap (30-249ms): latched into toggle mode, stay listening!
                         StateTransitionResult::NoChange
                     }
                 } else {
                     StateTransitionResult::NoChange
                 }
             }
+            HotkeyMode::ContinuousHandsFree => StateTransitionResult::NoChange,
+        }
+    }
+
+    /// Autonomous VAD trigger: transitions Idle to Listening upon detected speech onset.
+    pub fn on_vad_speech_start(
+        &mut self,
+        timestamp_ms: u64,
+        active_window_id: Option<u64>,
+    ) -> StateTransitionResult {
+        if self.state == SpeechState::Idle {
+            let from = self.state.clone();
+            let to = SpeechState::Listening;
+            self.state = to.clone();
+            self.press_start_time_ms = timestamp_ms;
+            self.target_window_id = active_window_id;
+            self.publish_state_changed(&to);
+
+            StateTransitionResult::Transitioned {
+                from,
+                to,
+                action: StateMachineAction::StartRecording {
+                    target_window_id: active_window_id,
+                },
+            }
+        } else {
+            StateTransitionResult::NoChange
+        }
+    }
+
+    /// Autonomous VAD trigger: transitions Listening to Transcribing upon speech offset.
+    pub fn on_vad_speech_end(&mut self, _timestamp_ms: u64) -> StateTransitionResult {
+        if self.state == SpeechState::Listening {
+            let from = self.state.clone();
+            let to = SpeechState::Transcribing;
+            self.state = to.clone();
+            self.publish_state_changed(&to);
+
+            StateTransitionResult::Transitioned {
+                from,
+                to,
+                action: StateMachineAction::StopRecordingAndTranscribe,
+            }
+        } else {
+            StateTransitionResult::NoChange
+        }
+    }
+
+    /// Autonomous VAD trigger: discards audio buffer if speech did not meet threshold.
+    pub fn on_vad_silence_discard(&mut self) -> StateTransitionResult {
+        if self.state == SpeechState::Listening {
+            let from = self.state.clone();
+            let to = SpeechState::Idle;
+            self.state = to.clone();
+            self.target_window_id = None;
+            self.publish_state_changed(&to);
+
+            StateTransitionResult::Transitioned {
+                from,
+                to,
+                action: StateMachineAction::CancelRecordingDiscardBuffer,
+            }
+        } else {
+            StateTransitionResult::NoChange
         }
     }
 

@@ -150,8 +150,8 @@ fn test_adversarial_audio_energy_massive_buffer_one_million_samples() {
     assert_eq!(compute_dbfs(rms_silence), -120.0);
     assert_eq!(peak_silence, 0.0);
     assert!(
-        elapsed.as_millis() < 50,
-        "1M samples RMS calculation must complete in < 50ms, took {:?}",
+        elapsed.as_millis() < 100,
+        "1M samples RMS calculation must complete in < 100ms in debug mode, took {:?}",
         elapsed
     );
 

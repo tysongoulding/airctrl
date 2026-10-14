@@ -4,6 +4,7 @@ pub mod ema;
 pub mod heuristics;
 pub mod one_euro;
 pub mod swipe;
+pub mod two_finger;
 
 pub use ema::EmaLandmarksFilter;
 pub use heuristics::{
@@ -12,6 +13,8 @@ pub use heuristics::{
 };
 pub use one_euro::OneEuroLandmarksFilter;
 pub use swipe::SwipeDetector;
+pub use two_finger::{TwoFingerDetector, TwoFingerGestureEvent};
+
 
 use crate::error::{GestureError, Result};
 use airctrl_core::types::gesture::{GestureType, HandLandmarks, Handedness, Landmark3D};

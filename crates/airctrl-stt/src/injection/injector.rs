@@ -90,12 +90,17 @@ impl ActiveWindowTextInjector {
             }
         }
 
-        // 3. Strategy selection: large payloads (> threshold) bypass typing and use clipboard
-        if text.len() > self.config.clipboard_fallback_threshold {
-            return self.execute_clipboard_fallback(text, target_window_id);
+        // 3. Pre-injection settle delay (paste_delay_before_ms)
+        if self.config.paste_delay_before_ms > 0 {
+            tokio::time::sleep(Duration::from_millis(self.config.paste_delay_before_ms)).await;
         }
 
-        // 4. Direct Unicode typing attempt
+        // 4. Strategy selection: large payloads (> threshold) bypass typing and use clipboard
+        if text.len() > self.config.clipboard_fallback_threshold {
+            return self.execute_reliable_paste(text, target_window_id).await;
+        }
+
+        // 5. Direct Unicode typing attempt
         match self.input_ops.type_text(text) {
             Ok(()) => Ok(InjectionReport {
                 status: InjectionStatus::Success,
@@ -105,16 +110,67 @@ impl ActiveWindowTextInjector {
             }),
             Err(e) => {
                 tracing::warn!(
-                    "Direct typing simulation failed ({}). Falling back to clipboard paste.",
+                    "Direct typing simulation failed ({}). Falling back to reliable clipboard paste.",
                     e
                 );
-                self.execute_clipboard_fallback(text, target_window_id)
+                self.execute_reliable_paste(text, target_window_id).await
             }
         }
     }
 
-    /// Executes clipboard fallback by setting system clipboard and typing paste shortcut.
-    fn execute_clipboard_fallback(
+    /// Executes clipboard paste with optional Reliable Paste preservation of original clipboard.
+    async fn execute_reliable_paste(
+        &self,
+        text: &str,
+        target_window_id: Option<u64>,
+    ) -> Result<InjectionReport, SttError> {
+        if self.config.reliable_paste {
+            let original_clipboard = match self.input_ops.get_clipboard_text() {
+                Ok(content) => content,
+                Err(e) => {
+                    tracing::warn!("Failed to snapshot clipboard before paste: {e}");
+                    None
+                }
+            };
+
+            let paste_result = self.input_ops.paste_text(text);
+
+            if self.config.paste_delay_after_ms > 0 {
+                tokio::time::sleep(Duration::from_millis(self.config.paste_delay_after_ms)).await;
+            }
+
+            // Restore original clipboard contents even if paste returned an error
+            if let Some(orig) = original_clipboard {
+                if let Err(e) = self.input_ops.set_clipboard_text(&orig) {
+                    tracing::warn!("Failed to restore clipboard text: {e}");
+                }
+            } else {
+                if let Err(e) = self.input_ops.clear_clipboard() {
+                    tracing::warn!("Failed to clear clipboard on restore: {e}");
+                }
+            }
+
+            paste_result.map_err(|e| SttError::Clipboard(e.to_string()))?;
+        } else {
+            self.input_ops
+                .paste_text(text)
+                .map_err(|e| SttError::Clipboard(e.to_string()))?;
+
+            if self.config.paste_delay_after_ms > 0 {
+                tokio::time::sleep(Duration::from_millis(self.config.paste_delay_after_ms)).await;
+            }
+        }
+
+        Ok(InjectionReport {
+            status: InjectionStatus::Success,
+            method: InjectionMethod::ClipboardPaste,
+            text_length: text.len(),
+            target_window_id,
+        })
+    }
+
+    /// Synchronous convenience fallback for backwards compatibility.
+    pub fn execute_clipboard_fallback(
         &self,
         text: &str,
         target_window_id: Option<u64>,
@@ -232,5 +288,48 @@ mod tests {
 
         // Verify window 1 was refocused
         assert_eq!(controllers.window.get_focus_history(), vec![1]);
+    }
+
+    #[tokio::test]
+    async fn test_reliable_paste_snapshots_and_restores_clipboard() {
+        let (provider, controllers) = create_mock_platform();
+        controllers.input.set_clipboard(Some("original secret text".to_string()));
+
+        let config = TextInjectionConfig {
+            clipboard_fallback_threshold: 5,
+            refocus_settle_delay_ms: 0,
+            reliable_paste: true,
+            paste_delay_before_ms: 0,
+            paste_delay_after_ms: 0,
+        };
+        let injector = ActiveWindowTextInjector::new(provider.window, provider.input, Some(config));
+
+        let report = injector.inject("injected speech text", None).await.unwrap();
+        assert_eq!(report.status, InjectionStatus::Success);
+        assert_eq!(report.method, InjectionMethod::ClipboardPaste);
+
+        // Verify pasted string was speech text
+        assert_eq!(controllers.input.get_pasted_strings(), vec!["injected speech text"]);
+        // Verify clipboard was restored to original secret text!
+        assert_eq!(controllers.input.get_clipboard(), Some("original secret text".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_reliable_paste_restores_empty_clipboard() {
+        let (provider, controllers) = create_mock_platform();
+        controllers.input.set_clipboard(None);
+
+        let config = TextInjectionConfig {
+            clipboard_fallback_threshold: 5,
+            refocus_settle_delay_ms: 0,
+            reliable_paste: true,
+            paste_delay_before_ms: 0,
+            paste_delay_after_ms: 0,
+        };
+        let injector = ActiveWindowTextInjector::new(provider.window, provider.input, Some(config));
+
+        let report = injector.inject("injected speech text", None).await.unwrap();
+        assert_eq!(report.status, InjectionStatus::Success);
+        assert_eq!(controllers.input.get_clipboard(), None);
     }
 }

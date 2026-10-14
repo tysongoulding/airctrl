@@ -46,15 +46,15 @@ def run_suite():
     total_count = count_t1 + count_t2 + count_t3 + count_t4
 
     print(f"[*] Discovered Tests:")
-    print(f"    - Tier 1 (Category-Partition):        {count_t1:3d} tests (Threshold: >= 130)")
-    print(f"    - Tier 2 (Boundary Value Analysis):   {count_t2:3d} tests (Threshold: >= 130)")
-    print(f"    - Tier 3 (Pairwise Combinatorial):    {count_t3:3d} tests (Threshold: >=  26)")
-    print(f"    - Tier 4 (Real-World Scenarios):      {count_t4:3d} tests (Threshold: >=  13)")
+    print(f"    - Tier 1 (Category-Partition):        {count_t1:3d} tests (Threshold: >= 275)")
+    print(f"    - Tier 2 (Boundary Value Analysis):   {count_t2:3d} tests (Threshold: >= 275)")
+    print(f"    - Tier 3 (Pairwise Combinatorial):    {count_t3:3d} tests (Threshold: >=  55)")
+    print(f"    - Tier 4 (Real-World Scenarios):      {count_t4:3d} tests (Threshold: >=  28)")
     print(f"    ------------------------------------------------")
-    print(f"    - TOTAL DISCOVERED:                   {total_count:3d} tests (Threshold: >= 299)")
+    print(f"    - TOTAL DISCOVERED:                   {total_count:3d} tests (Threshold: >= 633)")
     print("=" * 80)
 
-    if count_t1 < 130 or count_t2 < 130 or count_t3 < 26 or count_t4 < 13 or total_count < 299:
+    if count_t1 < 275 or count_t2 < 275 or count_t3 < 55 or count_t4 < 28 or total_count < 633:
         print("[!] ERROR: Coverage threshold check failed!")
         sys.exit(1)
 

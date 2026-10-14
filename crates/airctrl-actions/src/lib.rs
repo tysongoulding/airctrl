@@ -5,6 +5,7 @@ pub mod agent;
 pub mod crawler;
 pub mod error;
 pub mod fuzzy;
+pub mod geometry;
 pub mod grammar;
 pub mod hotkey;
 pub mod intent;
@@ -16,6 +17,7 @@ pub use airctrl_core as core;
 // Core re-exports
 pub use error::{ActionError, Result};
 pub use fuzzy::{AliasRegistry, FuzzyCandidate, FuzzyMatchResult, FuzzyMatcher, FuzzyMatcherConfig};
+pub use geometry::WindowGeometryEngine;
 pub use grammar::VoiceCommandGrammar;
 pub use intent::{
     ActionIntent, ClickPosition, ExtractedSlots, ParsedIntent, ScrollDirection, SlotValue,
@@ -49,6 +51,7 @@ pub use rea::{
 
 // High-level types from core for convenience
 pub use airctrl_core::types::{
-    ActionCommand, AgentPayload, AgentTarget, ClickAction, MatchType, ProcessInfo, SnapDirection,
-    WindowDetails, WindowInfo, WindowMatch, WindowRect,
+    ActionCommand, AgentPayload, AgentTarget, ClickAction, CloseTarget, CycleDirection,
+    DimensionDelta, MatchType, ProcessInfo, ResizeMode, SnapDirection, SnapPosition,
+    UiTarget, WindowDetails, WindowInfo, WindowMatch, WindowRect,
 };

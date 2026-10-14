@@ -1,5 +1,6 @@
 pub mod action;
 pub mod audio;
+pub mod camera;
 pub mod gesture;
 pub mod input;
 pub mod lan;
@@ -9,9 +10,11 @@ pub mod window;
 
 pub use action::*;
 pub use audio::*;
+pub use camera::*;
 pub use gesture::*;
 pub use input::*;
 pub use lan::*;
 pub use meeting::*;
 pub use stt::*;
 pub use window::*;
+

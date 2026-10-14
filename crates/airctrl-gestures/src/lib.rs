@@ -8,11 +8,13 @@ pub mod engine;
 pub mod error;
 pub mod frame;
 pub mod mapper;
+pub mod spatial;
 pub mod synthetic;
 pub mod topology;
 
 pub use airctrl_core::types::gesture::{
-    DialCoordinates, GestureType, HandLandmarks, Handedness, Landmark3D,
+    ActiveGesturesSnapshot, DialCoordinates, GestureTrackingMode, GestureType, HandLandmarks,
+    Handedness, Landmark3D, MultiHandLandmarks, PinchData, PointingRayData, TwoFingerData,
 };
 pub use benchmark::{
     BenchmarkBudget, BenchmarkReport, BenchmarkRunner, HandPath, SyntheticVideoStream,
@@ -21,8 +23,9 @@ pub use classifier::{
     calculate_palm_center, calculate_palm_normal, classify_heuristics, compute_pointing_ray,
     is_pinch_at_threshold, pinch_distance, EmaLandmarksFilter, FilterType, GestureClassifier,
     GestureClassifierConfig, OneEuroLandmarksFilter, PinchHysteresis, PointingRay,
-    RecognizedGesture, SwipeDetector,
+    RecognizedGesture, SwipeDetector, TwoFingerDetector, TwoFingerGestureEvent,
 };
+
 pub use engine::{HandLandmarkEngine, MockMediaPipeEngine, MockPose};
 pub use error::{GestureError, Result};
 pub use frame::{FrameBuffer, FrameBufferRef, PixelFormat};

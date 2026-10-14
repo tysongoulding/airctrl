@@ -1,5 +1,5 @@
 use crate::error::{Result, SttError};
-use crate::types::{ModelInfo, TranscriptionResult, WhisperModelVariant};
+use crate::types::{ModelFormat, ModelInfo, TranscriptionResult, WhisperModelVariant};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -13,7 +13,7 @@ pub trait SpeechToTextEngine: Send + Sync {
     fn is_loaded(&self) -> bool;
 
     /// Returns information about the loaded model, if available.
-    fn model_info(&self) -> Option<&ModelInfo>;
+    fn model_info(&self) -> Option<ModelInfo>;
 }
 
 /// Deterministic, zero-dependency in-memory mock Whisper engine.
@@ -45,6 +45,7 @@ impl MockWhisperEngine {
             variant: WhisperModelVariant::TinyEn,
             file_path: model_path.clone(),
             size_bytes: WhisperModelVariant::TinyEn.approximate_size_bytes(),
+            format: ModelFormat::GgmlBin,
             sha256: WhisperModelVariant::TinyEn
                 .official_sha256()
                 .unwrap_or("")
@@ -107,8 +108,8 @@ impl SpeechToTextEngine for MockWhisperEngine {
         self.is_loaded.load(Ordering::SeqCst)
     }
 
-    fn model_info(&self) -> Option<&ModelInfo> {
-        Some(&self.model_info)
+    fn model_info(&self) -> Option<ModelInfo> {
+        Some(self.model_info.clone())
     }
 }
 

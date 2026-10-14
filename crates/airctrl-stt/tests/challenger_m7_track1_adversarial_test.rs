@@ -349,6 +349,7 @@ async fn test_adversarial_text_injection_refocus_and_clipboard_fallback() {
     let config = TextInjectionConfig {
         clipboard_fallback_threshold: 500, // Small threshold for testing
         refocus_settle_delay_ms: 0,
+        ..Default::default()
     };
 
     let injector = ActiveWindowTextInjector::new(

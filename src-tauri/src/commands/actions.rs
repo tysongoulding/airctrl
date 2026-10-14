@@ -63,3 +63,55 @@ pub async fn toggle_command_palette(
 
     Ok(result)
 }
+
+#[tauri::command]
+pub async fn execute_voice_command(
+    bridge: State<'_, IpcBridge>,
+    utterance: String,
+) -> Result<Value, String> {
+    bridge
+        .invoke("executeVoiceCommand", Some(serde_json::json!({ "utterance": utterance })))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn snap_window(
+    bridge: State<'_, IpcBridge>,
+    position: String,
+) -> Result<Value, String> {
+    bridge
+        .invoke("snapWindow", Some(serde_json::json!({ "position": position })))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn resize_window(
+    bridge: State<'_, IpcBridge>,
+    args: Option<Value>,
+) -> Result<Value, String> {
+    bridge
+        .invoke("resizeWindow", args)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn cycle_window(
+    bridge: State<'_, IpcBridge>,
+    direction: Option<String>,
+) -> Result<Value, String> {
+    let args = direction.map(|d| serde_json::json!({ "direction": d }));
+    bridge
+        .invoke("cycleWindow", args)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn navigate_ui(
+    bridge: State<'_, IpcBridge>,
+    element: String,
+) -> Result<Value, String> {
+    bridge
+        .invoke("navigateUi", Some(serde_json::json!({ "element": element })))
+        .map_err(|e| e.to_string())
+}
+

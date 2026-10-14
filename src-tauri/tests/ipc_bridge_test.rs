@@ -60,7 +60,7 @@ fn test_ipc_custom_stt_engine_dependency_injection() {
         fn is_loaded(&self) -> bool {
             true
         }
-        fn model_info(&self) -> Option<&ModelInfo> {
+        fn model_info(&self) -> Option<ModelInfo> {
             None
         }
     }
@@ -480,6 +480,255 @@ fn test_ipc_inject_text_and_auto_inject() {
     assert_eq!(res_stop["status"], "TranscriptionReady");
     assert!(!res_stop["injected"].is_null());
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_ipc_loop_status_and_lifecycle() {
+    let bridge = IpcBridge::default();
+
+    // 1. Initial loop status: not running
+    let status = bridge
+        .invoke("getLoopStatus", None)
+        .expect("getLoopStatus failed");
+    assert_eq!(status["all_healthy"], false);
+    assert_eq!(status["audio_vad"]["is_running"], false);
+
+    // 2. Start worker loops
+    let start_res = bridge
+        .invoke("startWorkerLoops", None)
+        .expect("startWorkerLoops failed");
+    assert_eq!(start_res["success"], true);
+    assert_eq!(start_res["status"], "WorkerLoopsStarted");
+
+    // Let loops initialize
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // 3. Inspect running status
+    let running_status = bridge
+        .invoke("getLoopStatus", None)
+        .expect("getLoopStatus after start failed");
+    assert_eq!(running_status["all_healthy"], true);
+    assert_eq!(running_status["audio_vad"]["is_running"], true);
+    assert_eq!(running_status["vision_gesture"]["is_running"], true);
+    assert_eq!(running_status["meeting_watcher"]["is_running"], true);
+    assert_eq!(running_status["global_hotkey"]["is_running"], true);
+
+    // 4. Stop worker loops
+    let stop_res = bridge
+        .invoke("stopWorkerLoops", None)
+        .expect("stopWorkerLoops failed");
+    assert_eq!(stop_res["success"], true);
+    assert_eq!(stop_res["status"], "WorkerLoopsStopped");
+
+    // 5. Inspect stopped status
+    let stopped_status = bridge
+        .invoke("getLoopStatus", None)
+        .expect("getLoopStatus after stop failed");
+    assert_eq!(stopped_status["all_healthy"], false);
+    assert_eq!(stopped_status["audio_vad"]["is_running"], false);
+}
+
+#[test]
+fn test_ipc_get_dag_status() {
+    let bridge = IpcBridge::default();
+
+    let dag_status = bridge
+        .invoke("getDagStatus", None)
+        .expect("getDagStatus failed");
+    assert_eq!(dag_status["active"], true);
+    assert_eq!(dag_status["capacity"], 256);
+    assert!(dag_status["stages"].is_array());
+}
+
+#[test]
+fn test_ipc_zero_mock_audio_empty_buffer_error() {
+    let bridge = IpcBridge::default();
+
+    // Directly calling stopRecording on empty buffer must fail with ZeroSamples error
+    let err = bridge
+        .invoke("stopRecording", None)
+        .expect_err("stopRecording on empty buffer must fail");
+    match err {
+        IpcError::ExecutionFailed(msg) => {
+            assert!(
+                msg.contains("ZeroSamples") || msg.contains("No audio samples recorded"),
+                "Expected ZeroSamples in error message, got: {}",
+                msg
+            );
+        }
+        other => panic!("Expected ExecutionFailed, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_ipc_overlay_position_transitions() {
+    let bridge = IpcBridge::default();
+
+    // 1. Valid transitions: Top, Center, None, Bottom
+    for pos in ["Top", "Center", "None", "Bottom"] {
+        let res = bridge
+            .invoke("setOverlayPosition", Some(json!({ "position": pos })))
+            .expect("setOverlayPosition failed");
+        assert_eq!(res["position"], pos);
+        assert_eq!(res["status"], "success");
+        if pos == "None" {
+            assert_eq!(res["bounds"]["visible"], false);
+            assert_eq!(res["bounds"]["width"], 0);
+        } else {
+            assert_eq!(res["bounds"]["visible"], true);
+        }
+
+        let get_res = bridge
+            .invoke("getOverlayPosition", None)
+            .expect("getOverlayPosition failed");
+        assert_eq!(get_res["position"], pos);
+    }
+
+    // 2. Invalid position string must return InvalidArguments
+    let err = bridge
+        .invoke("setOverlayPosition", Some(json!({ "position": "InvalidCorner" })))
+        .expect_err("Invalid position must fail");
+    assert!(matches!(err, IpcError::InvalidArguments(_)));
+}
+
+#[test]
+fn test_ipc_models_and_recording_modes() {
+    let bridge = IpcBridge::default();
+
+    // 1. List models
+    let list_res = bridge.invoke("listModels", None).unwrap();
+    assert_eq!(list_res["status"], "success");
+    let models = list_res["models"].as_array().unwrap();
+    assert!(models.iter().any(|m| m.as_str() == Some("whisper-turbo.en")));
+    assert!(models.iter().any(|m| m.as_str() == Some("parakeet-unified-en-0.6b-q8_0")));
+
+    // 2. Select model
+    let sel_res = bridge
+        .invoke("selectModel", Some(json!({ "model": "parakeet-unified-en-0.6b-q8_0" })))
+        .unwrap();
+    assert_eq!(sel_res["selected_model"], "parakeet-unified-en-0.6b-q8_0");
+
+    // 3. Set & get recording modes across all 4 variants
+    for mode in ["SmartDualMode", "HoldOnly", "ToggleOnly", "ContinuousHandsFree"] {
+        let set_res = bridge
+            .invoke("setRecordingMode", Some(json!({ "mode": mode })))
+            .unwrap();
+        assert_eq!(set_res["mode"], mode);
+
+        let get_res = bridge.invoke("getRecordingMode", None).unwrap();
+        assert_eq!(get_res["recording_mode"], mode);
+    }
+}
+
+#[test]
+fn test_ipc_dictionary_engine_and_post_processing() {
+    let bridge = IpcBridge::default();
+
+    // 1. Update dictionary with literal and regex rules
+    let update_res = bridge
+        .invoke(
+            "updateDictionary",
+            Some(json!({
+                "rules": [
+                    { "trigger": "air control", "replacement": "airctrl", "is_regex": false, "preserve_case": true },
+                    { "trigger": "ty sun", "replacement": "Tyson", "is_regex": false, "preserve_case": true }
+                ]
+            })),
+        )
+        .unwrap();
+    assert_eq!(update_res["total_rules"], 2);
+
+    // 2. Get dictionary
+    let get_res = bridge.invoke("getDictionary", None).unwrap();
+    assert_eq!(get_res["rules"].as_array().unwrap().len(), 2);
+
+    // 3. Toggle post-processing
+    let toggle_res = bridge.invoke("togglePostProcessing", None).unwrap();
+    assert!(toggle_res["post_processing_enabled"].is_boolean());
+}
+
+#[test]
+fn test_ipc_transcript_history_and_search() {
+    use airctrl_core::types::TranscriptItem;
+    let bridge = IpcBridge::default();
+
+    // 1. Clear transcripts
+    bridge.invoke("clearTranscripts", None).unwrap();
+
+    // 2. Seed transcripts into state
+    let item1 = TranscriptItem {
+        id: "txn_1".to_string(),
+        timestamp: 1000.0,
+        text: "Standup meeting update on rust".to_string(),
+        raw_text: "standup meeting update on rust".to_string(),
+        duration_ms: 3500,
+        model_used: "whisper-base.en".to_string(),
+        confidence: 0.95,
+        session_id: "default_session".to_string(),
+        target_app: Some("slack".to_string()),
+        target_title: Some("Standup".to_string()),
+        injected: true,
+        starred: false,
+    };
+    let item2 = TranscriptItem {
+        id: "txn_2".to_string(),
+        timestamp: 2000.0,
+        text: "Fixing compiler errors in tauri".to_string(),
+        raw_text: "fixing compiler errors in tauri".to_string(),
+        duration_ms: 2200,
+        model_used: "whisper-turbo.en".to_string(),
+        confidence: 0.98,
+        session_id: "default_session".to_string(),
+        target_app: Some("code".to_string()),
+        target_title: Some("VS Code".to_string()),
+        injected: true,
+        starred: false,
+    };
+    bridge.state.transcript_store.store(item1).unwrap();
+    bridge.state.transcript_store.store(item2).unwrap();
+
+    // 3. Search all transcripts (empty query returns reverse-chronological)
+    let search_all = bridge
+        .invoke("searchTranscripts", Some(json!({ "query": "" })))
+        .unwrap();
+    assert_eq!(search_all["count"], 2);
+    let results = search_all["transcripts"].as_array().unwrap();
+    assert_eq!(results[0]["id"], "txn_2"); // Most recent first
+    assert_eq!(results[1]["id"], "txn_1");
+
+    // 4. Search by keyword
+    let search_rust = bridge
+        .invoke("searchTranscripts", Some(json!({ "query": "rust" })))
+        .unwrap();
+    assert_eq!(search_rust["count"], 1);
+    assert_eq!(search_rust["transcripts"][0]["id"], "txn_1");
+
+    // 5. Search by model filter
+    let search_model = bridge
+        .invoke("searchTranscripts", Some(json!({ "query": "", "model": "turbo" })))
+        .unwrap();
+    assert_eq!(search_model["count"], 1);
+    assert_eq!(search_model["transcripts"][0]["id"], "txn_2");
+
+    // 6. Clear transcripts
+    bridge.invoke("clearTranscripts", None).unwrap();
+    let search_empty = bridge.invoke("searchTranscripts", None).unwrap();
+    assert_eq!(search_empty["count"], 0);
+}
+
+#[test]
+fn test_ipc_debug_drawer_toggle_and_status() {
+    let bridge = IpcBridge::default();
+
+    let initial = bridge.invoke("getDebugDrawerStatus", None).unwrap();
+    assert_eq!(initial["debug_drawer_visible"], false);
+
+    let toggled = bridge.invoke("toggleDebugDrawer", None).unwrap();
+    assert_eq!(toggled["debug_drawer_visible"], true);
+
+    let status = bridge.invoke("getDebugDrawerStatus", None).unwrap();
+    assert_eq!(status["debug_drawer_visible"], true);
+}
+
 
 
 

@@ -3,19 +3,31 @@
 //! Intelligent meeting detection, audio stream monitoring, camera privacy auto-kill switch,
 //! and compliance recording audio injection for `airctrl`.
 
+pub mod archive;
 pub mod audio;
+pub mod camera;
 pub mod compliance;
 pub mod config;
 pub mod detector;
+pub mod enhance;
 pub mod error;
+pub mod export;
 pub mod privacy;
+pub mod summary;
+pub mod transcription;
 pub mod types;
 pub mod watcher;
 
 // Re-exports
+pub use archive::{GeneratedSummaryRecord, LiveTranscriptChunk, MeetingArchiveEntry, MeetingArchiveStore};
+pub use camera::{
+    FanOutFrameResult, PrivacySlateGenerator, PrivacySlateRenderer, RingSlot, SplitterFanOutResult,
+    VirtualCameraSplitter, ZeroLockVideoRingBuffer,
+};
 pub use audio::{
     compute_dbfs, compute_peak, compute_rms, AudioProcessCorrelator, AudioStreamMetrics,
-    AudioStreamMonitor, CorrelatedState, HangoverStateMachine, SpeechState,
+    AudioStreamMonitor, CorrelatedState, DualAudioMixer, HangoverStateMachine, MixerConfig,
+    SpeechState,
 };
 pub use compliance::{ComplianceAudioGenerator, ComplianceAudioInjector, MockAudioSink};
 pub use config::{
@@ -25,14 +37,25 @@ pub use detector::{
     browser::scan_browser_item, process::scan_dedicated_item, signatures::DEDICATED_SIGNATURES,
     DefaultMeetingDetector, MeetingDetector,
 };
+pub use enhance::{
+    AudioDecoder, AudioImportService, DecodedAudio, ImportAndTranscribeResult, ImportOptions,
+    SUPPORTED_AUDIO_EXTENSIONS,
+};
 pub use error::{MeetingError, Result};
+pub use export::{DocumentExporter, ExportFormat};
 pub use privacy::CameraKillSwitch;
+pub use summary::{
+    interpolate_template, AiSummaryService, HttpSummaryClient, SummaryProvider,
+    SummaryProviderConfig, SummaryResult, SummaryTemplate, TemplateContext, TemplateDefinition,
+};
+pub use transcription::LiveMeetingTranscriber;
 pub use types::{
     ActiveMeetingInfo, CameraState, ComplianceInjectionEvent, CompliancePlaybackResult,
     KillSwitchStatus, MeetingApp, MeetingInfo, MeetingPlatform, MeetingSignature, MeetingStatus,
     ProcessScanItem,
 };
 pub use watcher::{MeetingWatcher, WatcherHandle};
+
 
 use std::sync::OnceLock;
 use std::sync::Arc;

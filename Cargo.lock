@@ -28,13 +28,16 @@ dependencies = [
  "airctrl-meetings",
  "airctrl-stt",
  "chrono",
+ "hound",
  "parking_lot",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
 ]
@@ -111,10 +114,13 @@ version = "0.1.0"
 dependencies = [
  "airctrl-actions",
  "airctrl-core",
+ "airctrl-stt",
  "chrono",
  "cpal",
+ "flate2",
  "hound",
  "regex",
+ "reqwest 0.12.28",
  "rodio",
  "serde",
  "serde_json",
@@ -124,6 +130,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -135,6 +142,8 @@ dependencies = [
  "cpal",
  "enigo",
  "hound",
+ "parking_lot",
+ "regex",
  "serde",
  "serde_json",
  "sha2",

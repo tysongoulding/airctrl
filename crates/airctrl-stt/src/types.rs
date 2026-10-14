@@ -1,49 +1,9 @@
+pub use airctrl_core::types::{
+    AudioCueType, DictionaryRule, HotkeyMode, ModelFormat, OverlayPosition, RecordingMode,
+    TranscriptItem, WhisperModelVariant,
+};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
-/// Known variants of OpenAI Whisper models supported for offline speech-to-text.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WhisperModelVariant {
-    #[serde(rename = "tiny.en")]
-    TinyEn,
-    #[serde(rename = "base.en")]
-    BaseEn,
-    #[serde(rename = "small.en")]
-    SmallEn,
-    #[serde(rename = "custom")]
-    Custom,
-}
-
-impl WhisperModelVariant {
-    /// Standard filename for model weights on disk.
-    pub fn default_filename(&self) -> &'static str {
-        match self {
-            Self::TinyEn => "whisper-tiny.en.bin",
-            Self::BaseEn => "whisper-base.en.bin",
-            Self::SmallEn => "whisper-small.en.bin",
-            Self::Custom => "custom-model.bin",
-        }
-    }
-
-    /// Approximate size in bytes for model weights.
-    pub fn approximate_size_bytes(&self) -> u64 {
-        match self {
-            Self::TinyEn => 77_700_000,
-            Self::BaseEn => 142_000_000,
-            Self::SmallEn => 488_000_000,
-            Self::Custom => 0,
-        }
-    }
-
-    /// Known official SHA-256 checksum for model weights.
-    pub fn official_sha256(&self) -> Option<&'static str> {
-        match self {
-            Self::TinyEn => Some("bd577a113a8644458634039ac77fb8d66a33c02c582b240d84a5ffc6c6bfaeee"),
-            Self::BaseEn => Some("137c40409d784d83bd7a8f62c08ea2773d700f83c63dec438e149a3775f970aa"),
-            _ => None,
-        }
-    }
-}
 
 /// Metadata describing a discovered or loaded Whisper model file.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -51,8 +11,29 @@ pub struct ModelInfo {
     pub variant: WhisperModelVariant,
     pub file_path: PathBuf,
     pub size_bytes: u64,
+    pub format: ModelFormat,
     pub sha256: String,
     pub is_verified: bool,
+}
+
+impl ModelInfo {
+    pub fn new(
+        variant: WhisperModelVariant,
+        file_path: PathBuf,
+        size_bytes: u64,
+        format: ModelFormat,
+        sha256: String,
+        is_verified: bool,
+    ) -> Self {
+        Self {
+            variant,
+            file_path,
+            size_bytes,
+            format,
+            sha256,
+            is_verified,
+        }
+    }
 }
 
 /// Timestamped segment of recognized speech within an utterance.

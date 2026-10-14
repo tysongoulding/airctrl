@@ -1015,3 +1015,7 @@ class MeetingWatcher:
             "injected_into_stream": True,
             "status": "Success"
         }
+
+
+# Import R3 extensions (Features 33–61)
+from tests.e2e.e2e_harness_r3 import *

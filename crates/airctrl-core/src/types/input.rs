@@ -52,4 +52,8 @@ pub enum RecordedInputAction {
     },
     PointerMoved { x: i32, y: i32 },
     PointerClicked(ClickAction),
+    PointerScrolled {
+        direction: crate::types::action::ScrollDirection,
+        amount: u32,
+    },
 }

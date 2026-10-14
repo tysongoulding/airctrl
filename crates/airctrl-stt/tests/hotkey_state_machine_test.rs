@@ -225,3 +225,79 @@ fn test_smart_dual_mode_hold_and_tap_flow() {
     assert_eq!(*sm.state(), SpeechState::Idle);
 }
 
+#[test]
+fn test_m8_smart_dual_mode_flutter_rejection() {
+    let mut sm = HotkeyStateMachine::new(HotkeyMode::SmartDualMode, None);
+
+    // Press at 1000ms
+    sm.on_key_down(1000, None);
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // Release at 1025ms (25ms < 30ms jitter threshold) -> Cancelled!
+    let res = sm.on_key_up(1025);
+    assert!(matches!(
+        res,
+        StateTransitionResult::Transitioned {
+            to: SpeechState::Idle,
+            action: StateMachineAction::CancelRecordingDiscardBuffer,
+            ..
+        }
+    ));
+    assert_eq!(*sm.state(), SpeechState::Idle);
+}
+
+#[test]
+fn test_m8_hold_only_mode() {
+    let mut sm = HotkeyStateMachine::new(HotkeyMode::HoldOnly, None);
+
+    // Micro-press under 100ms
+    sm.on_key_down(1000, None);
+    let res = sm.on_key_up(1050);
+    assert_eq!(*sm.state(), SpeechState::Idle);
+    assert!(matches!(res, StateTransitionResult::Transitioned { action: StateMachineAction::CancelRecordingDiscardBuffer, .. }));
+
+    // Hold over 100ms
+    sm.on_key_down(2000, None);
+    let res = sm.on_key_up(2200);
+    assert_eq!(*sm.state(), SpeechState::Transcribing);
+    assert!(matches!(res, StateTransitionResult::Transitioned { action: StateMachineAction::StopRecordingAndTranscribe, .. }));
+}
+
+#[test]
+fn test_m8_toggle_only_mode() {
+    let mut sm = HotkeyStateMachine::new(HotkeyMode::ToggleOnly, None);
+
+    sm.on_key_down(1000, None);
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // Key up does nothing
+    assert_eq!(sm.on_key_up(1500), StateTransitionResult::NoChange);
+    assert_eq!(*sm.state(), SpeechState::Listening);
+
+    // Second press stops and transcribes
+    sm.on_key_down(2000, None);
+    assert_eq!(*sm.state(), SpeechState::Transcribing);
+}
+
+#[test]
+fn test_m8_continuous_hands_free_vad_lifecycle() {
+    let mut sm = HotkeyStateMachine::new(HotkeyMode::ContinuousHandsFree, None);
+
+    // Speech onset detected
+    let res = sm.on_vad_speech_start(1000, Some(77));
+    assert_eq!(*sm.state(), SpeechState::Listening);
+    assert!(matches!(res, StateTransitionResult::Transitioned { action: StateMachineAction::StartRecording { target_window_id: Some(77) }, .. }));
+
+    // Speech offset detected
+    let res = sm.on_vad_speech_end(2500);
+    assert_eq!(*sm.state(), SpeechState::Transcribing);
+    assert!(matches!(res, StateTransitionResult::Transitioned { action: StateMachineAction::StopRecordingAndTranscribe, .. }));
+
+    // Discard handling
+    sm.reset();
+    sm.on_vad_speech_start(3000, None);
+    let res = sm.on_vad_silence_discard();
+    assert_eq!(*sm.state(), SpeechState::Idle);
+    assert!(matches!(res, StateTransitionResult::Transitioned { action: StateMachineAction::CancelRecordingDiscardBuffer, .. }));
+}
+

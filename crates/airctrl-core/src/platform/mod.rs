@@ -3,8 +3,14 @@ pub mod mock;
 pub mod traits;
 pub mod windows;
 
-pub use mock::{create_mock_platform, MockAudioOps, MockInputOps, MockPlatformControllers, MockWindowOps};
-pub use traits::{PlatformAudioOps, PlatformInputOps, PlatformProvider, PlatformWindowOps};
+pub use mock::{
+    create_mock_platform, MockAudioOps, MockCameraOps, MockInputOps, MockPhysicalCameraStream,
+    MockPlatformControllers, MockVirtualCameraSink, MockWindowOps,
+};
+pub use traits::{
+    PhysicalCameraStream, PlatformAudioOps, PlatformCameraOps, PlatformInputOps, PlatformProvider,
+    PlatformWindowOps, VirtualCameraDeviceSink,
+};
 
 use std::sync::Arc;
 
@@ -22,6 +28,7 @@ pub fn create_platform_provider(use_mock: bool) -> PlatformProvider {
             window: Arc::new(windows::WindowsWindowOps),
             input: Arc::new(windows::WindowsInputOps),
             audio: Arc::new(windows::WindowsAudioOps),
+            camera: Arc::new(mock::MockCameraOps::new()),
         }
     }
 
@@ -31,6 +38,7 @@ pub fn create_platform_provider(use_mock: bool) -> PlatformProvider {
             window: Arc::new(linux::LinuxWindowOps),
             input: Arc::new(linux::LinuxInputOps),
             audio: Arc::new(linux::LinuxAudioOps),
+            camera: Arc::new(mock::MockCameraOps::new()),
         }
     }
 
@@ -40,3 +48,4 @@ pub fn create_platform_provider(use_mock: bool) -> PlatformProvider {
         provider
     }
 }
+

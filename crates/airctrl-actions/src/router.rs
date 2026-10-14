@@ -2,8 +2,8 @@ use crate::fuzzy::{FuzzyCandidate, FuzzyMatcher, FuzzyMatcherConfig};
 use crate::grammar::VoiceCommandGrammar;
 use crate::intent::{ActionIntent, ParsedIntent};
 use airctrl_core::types::{
-    ActionCommand, AgentPayload, AgentTarget, ClickAction,
-    SnapDirection, SystemInputAction, WindowDetails, WindowInfo,
+    ActionCommand, AgentPayload, AgentTarget, ClickAction, CycleDirection, DimensionDelta,
+    ResizeMode, SnapDirection, SystemInputAction, UiTarget, WindowDetails, WindowInfo,
 };
 use chrono::Utc;
 
@@ -76,6 +76,29 @@ impl SemanticCommandRouter {
                 ActionCommand::WindowSnap { direction }
             }
 
+            ActionIntent::ResizeWindow => {
+                let mode = parsed.slots.resize_mode.clone().unwrap_or(ResizeMode::Delta {
+                    dimension: DimensionDelta::Larger,
+                    delta_pixels: 100,
+                });
+                ActionCommand::ResizeWindow { mode }
+            }
+
+            ActionIntent::CycleWindow => {
+                let direction = parsed.slots.cycle_direction.unwrap_or(CycleDirection::Next);
+                ActionCommand::CycleWindow { direction }
+            }
+
+            ActionIntent::NavigateUi => {
+                let element = parsed.slots.ui_target.unwrap_or(UiTarget::NextField);
+                ActionCommand::NavigateUi { element }
+            }
+
+            ActionIntent::SwitchFocus => {
+                let app_name = parsed.slots.target.clone().unwrap_or_default();
+                ActionCommand::SwitchFocus { app_name }
+            }
+
             ActionIntent::FocusWindow => {
                 let query = parsed.slots.target.clone().unwrap_or_default();
                 let window_id = if let Some(wins) = windows {
@@ -113,12 +136,16 @@ impl SemanticCommandRouter {
 
             ActionIntent::LaunchApp => {
                 let app_name = parsed.slots.target.clone().unwrap_or_default();
-                ActionCommand::LaunchApp { app_name }
+                let auto_center = parsed.slots.auto_center.unwrap_or(true);
+                ActionCommand::LaunchApp { app_name, auto_center }
             }
 
             ActionIntent::CloseApp => {
                 let app_name = parsed.slots.target.clone().unwrap_or_default();
-                ActionCommand::CloseApp { app_name }
+                ActionCommand::CloseApp {
+                    app_name,
+                    target: "App".to_string(),
+                }
             }
 
             ActionIntent::CenterApp => {

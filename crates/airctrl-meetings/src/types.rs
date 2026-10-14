@@ -42,3 +42,17 @@ pub struct MeetingSignature {
     pub title_keywords: &'static [&'static str],
     pub requires_title_match: bool,
 }
+
+/// A timestamped segment of live or imported meeting transcription.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LiveTranscriptChunk {
+    pub id: String,
+    pub speaker: String, // "Host", "Participant", "Mixed"
+    pub text: String,
+    #[serde(alias = "start_ms")]
+    pub start_time_ms: u64,
+    #[serde(alias = "end_ms")]
+    pub end_time_ms: u64,
+    pub confidence: f32,
+}
+

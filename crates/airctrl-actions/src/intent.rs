@@ -1,5 +1,7 @@
 pub use airctrl_core::types::{ClickPosition, ScrollDirection, SystemInputAction};
-use airctrl_core::types::{AgentTarget, ClickAction, SnapDirection};
+use airctrl_core::types::{
+    AgentTarget, ClickAction, CycleDirection, ResizeMode, SnapDirection, SnapPosition, UiTarget,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,7 +12,11 @@ pub enum ActionIntent {
     CloseApp,
     CenterApp,
     FocusWindow,
+    SwitchFocus,
     WindowSnap,
+    ResizeWindow,
+    CycleWindow,
+    NavigateUi,
     WindowMinimize,
     WindowClose,
     SystemInput,
@@ -32,6 +38,9 @@ pub enum SlotValue {
     ClickPosition(ClickPosition),
     ClickButton(ClickAction),
     Boolean(bool),
+    ResizeMode(ResizeMode),
+    CycleDirection(CycleDirection),
+    UiTarget(UiTarget),
 }
 
 impl SlotValue {
@@ -97,12 +106,16 @@ impl SlotValue {
 pub struct ExtractedSlots {
     pub verb: Option<String>,
     pub target: Option<String>,
-    pub direction: Option<SnapDirection>,
+    pub direction: Option<SnapPosition>,
     pub agent: Option<AgentTarget>,
     pub payload: Option<String>,
     pub numeric: Option<i64>,
     pub scroll_direction: Option<ScrollDirection>,
     pub click_position: Option<ClickPosition>,
+    pub resize_mode: Option<ResizeMode>,
+    pub cycle_direction: Option<CycleDirection>,
+    pub ui_target: Option<UiTarget>,
+    pub auto_center: Option<bool>,
     pub extra: HashMap<String, SlotValue>,
 }
 

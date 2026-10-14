@@ -17,6 +17,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 sha2 = { workspace = true }
+regex = { workspace = true }
+parking_lot = "0.12"
 
 arboard = { version = "3.4", optional = true }
 enigo = { version = "0.2", optional = true }

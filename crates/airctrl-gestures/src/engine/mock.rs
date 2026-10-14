@@ -4,7 +4,7 @@ use super::HandLandmarkEngine;
 use crate::error::{GestureError, Result};
 use crate::frame::FrameBufferRef;
 use crate::topology::*;
-use airctrl_core::types::gesture::{HandLandmarks, Handedness, Landmark3D};
+use airctrl_core::types::gesture::{HandLandmarks, Handedness, Landmark3D, MultiHandLandmarks};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::RwLock;
 
@@ -23,6 +23,8 @@ pub enum MockPose {
 pub struct MockMediaPipeEngine {
     is_ready: AtomicBool,
     current_pose: RwLock<MockPose>,
+    left_pose: RwLock<MockPose>,
+    dual_hand_mode: AtomicBool,
     handedness: RwLock<Handedness>,
     confidence: RwLock<f32>,
     name: String,
@@ -39,6 +41,8 @@ impl MockMediaPipeEngine {
         Self {
             is_ready: AtomicBool::new(true),
             current_pose: RwLock::new(MockPose::Neutral),
+            left_pose: RwLock::new(MockPose::Empty),
+            dual_hand_mode: AtomicBool::new(false),
             handedness: RwLock::new(Handedness::Right),
             confidence: RwLock::new(0.95),
             name: "MockMediaPipeEngine-v1.0".to_string(),
@@ -51,8 +55,28 @@ impl MockMediaPipeEngine {
         engine
     }
 
+    pub fn with_dual_poses(left: MockPose, right: MockPose) -> Self {
+        let engine = Self::new();
+        *engine.left_pose.write().unwrap() = left;
+        *engine.current_pose.write().unwrap() = right;
+        engine.dual_hand_mode.store(true, Ordering::SeqCst);
+        engine
+    }
+
     pub fn set_pose(&self, pose: MockPose) {
         *self.current_pose.write().unwrap() = pose;
+    }
+
+    pub fn set_left_pose(&self, pose: MockPose) {
+        *self.left_pose.write().unwrap() = pose;
+    }
+
+    pub fn set_dual_hand_mode(&self, enabled: bool) {
+        self.dual_hand_mode.store(enabled, Ordering::SeqCst);
+    }
+
+    pub fn is_dual_hand_mode(&self) -> bool {
+        self.dual_hand_mode.load(Ordering::SeqCst)
     }
 
     pub fn set_ready(&self, ready: bool) {
@@ -66,6 +90,7 @@ impl MockMediaPipeEngine {
     pub fn set_handedness(&self, handedness: Handedness) {
         *self.handedness.write().unwrap() = handedness;
     }
+
 
     /// Synthesizes 21 3D landmarks for a given mock pose.
     pub fn synthesize_landmarks(pose: MockPose) -> Option<[Landmark3D; 21]> {
@@ -146,6 +171,27 @@ impl MockMediaPipeEngine {
 
         Some(landmarks)
     }
+
+    /// Synthesizes 21 3D landmarks for a given mock pose and handedness.
+    /// Positions left hand around x in [0.15, 0.45] and right hand around x in [0.55, 0.85].
+    pub fn synthesize_hand_landmarks(
+        pose: MockPose,
+        handedness: Handedness,
+    ) -> Option<[Landmark3D; 21]> {
+        let base = Self::synthesize_landmarks(pose)?;
+        let mut scaled = base;
+        for lm in scaled.iter_mut() {
+            match handedness {
+                Handedness::Left => {
+                    lm.x = (lm.x * 0.55 + 0.05).clamp(0.15, 0.45);
+                }
+                Handedness::Right => {
+                    lm.x = (lm.x * 0.55 + 0.45).clamp(0.55, 0.85);
+                }
+            }
+        }
+        Some(scaled)
+    }
 }
 
 impl HandLandmarkEngine for MockMediaPipeEngine {
@@ -209,6 +255,104 @@ impl HandLandmarkEngine for MockMediaPipeEngine {
         }
     }
 
+    fn process_frame_multi(&self, frame: &FrameBufferRef<'_>) -> Result<MultiHandLandmarks> {
+        if !self.is_ready() {
+            return Err(GestureError::EngineNotReady(
+                "MockMediaPipeEngine is not ready".into(),
+            ));
+        }
+
+        // Validate buffer dimensions
+        if frame.width == 0 || frame.height == 0 {
+            return Err(GestureError::InvalidFrameDimensions {
+                width: frame.width,
+                height: frame.height,
+            });
+        }
+
+        let expected_bytes = frame.stride * (frame.height as usize);
+        if frame.data.len() < expected_bytes {
+            return Err(GestureError::InvalidBufferLength {
+                expected: expected_bytes,
+                actual: frame.data.len(),
+                width: frame.width,
+                height: frame.height,
+                stride: frame.stride,
+            });
+        }
+
+        // Decode primary (right) pose from pixel (0, 0)
+        let right_pose = if let Some(px) = frame.get_pixel(0, 0) {
+            match px {
+                (255, 0, 0) => MockPose::Pointing,
+                (0, 255, 0) => MockPose::Pinch,
+                (0, 0, 255) => MockPose::OpenPalm,
+                (128, 128, 128) => MockPose::Fist,
+                (200, 200, 200) => MockPose::Neutral,
+                (1, 1, 1) => MockPose::Empty,
+                _ => *self.current_pose.read().unwrap(),
+            }
+        } else {
+            *self.current_pose.read().unwrap()
+        };
+
+        // Decode secondary (left) pose from pixel (1, 0) if present, or from left_pose
+        let left_pose = if frame.width > 1 {
+            if let Some(px) = frame.get_pixel(1, 0) {
+                match px {
+                    (255, 0, 0) => MockPose::Pointing,
+                    (0, 255, 0) => MockPose::Pinch,
+                    (0, 0, 255) => MockPose::OpenPalm,
+                    (128, 128, 128) => MockPose::Fist,
+                    (200, 200, 200) => MockPose::Neutral,
+                    (1, 1, 1) => MockPose::Empty,
+                    _ => {
+                        if self.dual_hand_mode.load(Ordering::SeqCst) {
+                            *self.left_pose.read().unwrap()
+                        } else {
+                            MockPose::Empty
+                        }
+                    }
+                }
+            } else if self.dual_hand_mode.load(Ordering::SeqCst) {
+                *self.left_pose.read().unwrap()
+            } else {
+                MockPose::Empty
+            }
+        } else if self.dual_hand_mode.load(Ordering::SeqCst) {
+            *self.left_pose.read().unwrap()
+        } else {
+            MockPose::Empty
+        };
+
+        let confidence = *self.confidence.read().unwrap();
+        let left_hand = if left_pose != MockPose::Empty {
+            Self::synthesize_hand_landmarks(left_pose, Handedness::Left).map(|landmarks| {
+                HandLandmarks {
+                    landmarks,
+                    handedness: Handedness::Left,
+                    confidence,
+                }
+            })
+        } else {
+            None
+        };
+
+        let right_hand = if right_pose != MockPose::Empty {
+            Self::synthesize_hand_landmarks(right_pose, Handedness::Right).map(|landmarks| {
+                HandLandmarks {
+                    landmarks,
+                    handedness: Handedness::Right,
+                    confidence,
+                }
+            })
+        } else {
+            None
+        };
+
+        Ok(MultiHandLandmarks::new(left_hand, right_hand))
+    }
+
     fn is_ready(&self) -> bool {
         self.is_ready.load(Ordering::SeqCst)
     }
@@ -217,3 +361,4 @@ impl HandLandmarkEngine for MockMediaPipeEngine {
         &self.name
     }
 }
+

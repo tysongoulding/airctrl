@@ -65,7 +65,7 @@ impl ActionHotkeyStateMachine {
         active_window_id: Option<u64>,
     ) -> ActionStateTransitionResult {
         match self.mode {
-            HotkeyMode::PushToTalk => {
+            HotkeyMode::PushToTalk | HotkeyMode::HoldOnly => {
                 if self.state == ActionState::Idle {
                     let from = self.state.clone();
                     let to = ActionState::ActionListening;
@@ -85,7 +85,7 @@ impl ActionHotkeyStateMachine {
                     ActionStateTransitionResult::NoChange
                 }
             }
-            HotkeyMode::Toggle => match self.state {
+            HotkeyMode::Toggle | HotkeyMode::ToggleOnly => match self.state {
                 ActionState::Idle => {
                     let from = self.state.clone();
                     let to = ActionState::ActionListening;
@@ -115,7 +115,7 @@ impl ActionHotkeyStateMachine {
                 }
                 _ => ActionStateTransitionResult::NoChange,
             },
-            HotkeyMode::SmartDual => match self.state {
+            HotkeyMode::SmartDual | HotkeyMode::SmartDualMode | HotkeyMode::ContinuousHandsFree => match self.state {
                 ActionState::Idle => {
                     let from = self.state.clone();
                     let to = ActionState::ActionListening;
@@ -151,7 +151,7 @@ impl ActionHotkeyStateMachine {
     /// Handles key-up event (`Ctrl+Alt` released).
     pub fn on_key_up(&mut self, timestamp_ms: u64) -> ActionStateTransitionResult {
         match self.mode {
-            HotkeyMode::PushToTalk => {
+            HotkeyMode::PushToTalk | HotkeyMode::HoldOnly => {
                 if self.state == ActionState::ActionListening {
                     let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
                     if duration < self.min_press_duration_ms {
@@ -183,8 +183,8 @@ impl ActionHotkeyStateMachine {
                     ActionStateTransitionResult::NoChange
                 }
             }
-            HotkeyMode::Toggle => ActionStateTransitionResult::NoChange,
-            HotkeyMode::SmartDual => {
+            HotkeyMode::Toggle | HotkeyMode::ToggleOnly => ActionStateTransitionResult::NoChange,
+            HotkeyMode::SmartDual | HotkeyMode::SmartDualMode | HotkeyMode::ContinuousHandsFree => {
                 if self.state == ActionState::ActionListening {
                     let duration = timestamp_ms.saturating_sub(self.press_start_time_ms);
                     if duration >= 250 {

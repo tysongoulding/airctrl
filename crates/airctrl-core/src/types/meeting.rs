@@ -146,3 +146,56 @@ pub struct ComplianceInjectionEvent {
     pub audio_duration_ms: u32,
     pub status: String,
 }
+
+/// Speaker identity classification for meeting transcription.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MeetingSpeaker {
+    #[serde(rename = "Host")]
+    LocalUser,
+    #[serde(rename = "Participant")]
+    RemoteParticipant,
+    #[serde(rename = "Mixed")]
+    Mixed,
+}
+
+impl MeetingSpeaker {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::LocalUser => "Host",
+            Self::RemoteParticipant => "Participant",
+            Self::Mixed => "Mixed",
+        }
+    }
+}
+
+impl std::fmt::Display for MeetingSpeaker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Timestamped segment of recognized speech in a meeting.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MeetingTranscriptSegment {
+    pub id: String,
+    pub meeting_id: String,
+    #[serde(alias = "start_time_ms")]
+    pub start_ms: u64,
+    #[serde(alias = "end_time_ms")]
+    pub end_ms: u64,
+    pub speaker: String, // "Host", "Participant", or "Mixed"
+    pub text: String,
+    pub confidence: f32,
+    pub is_final: bool,
+}
+
+/// Complete transcript produced by real-time recording or audio import.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MeetingTranscript {
+    pub meeting_id: String,
+    pub duration_seconds: u64,
+    pub segments: Vec<MeetingTranscriptSegment>,
+    pub full_text: String,
+    pub language: Option<String>,
+}
+

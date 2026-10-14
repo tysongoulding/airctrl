@@ -30,6 +30,7 @@ pub struct WindowContextMap {
     by_id: HashMap<u64, WindowDetails>,
     by_process_name: HashMap<String, Vec<u64>>,
     by_pid: HashMap<u32, Vec<u64>>,
+    z_order: Vec<u64>,
     last_refreshed: Instant,
     is_dirty: AtomicBool,
     config: CrawlerConfig,
@@ -44,6 +45,7 @@ impl WindowContextMap {
             by_id: HashMap::new(),
             by_process_name: HashMap::new(),
             by_pid: HashMap::new(),
+            z_order: Vec::new(),
             last_refreshed: Instant::now() - Duration::from_secs(60), // Force initial refresh
             is_dirty: AtomicBool::new(true),
             config,
@@ -108,6 +110,7 @@ impl WindowContextMap {
             });
         }
 
+        self.z_order = windows.iter().map(|w| w.id).collect();
         self.windows = windows;
         self.processes = processes;
         self.active_window = active_window;
@@ -118,6 +121,10 @@ impl WindowContextMap {
         self.is_dirty.store(false, Ordering::SeqCst);
 
         Ok(())
+    }
+
+    pub fn z_order(&self) -> &[u64] {
+        &self.z_order
     }
 
     pub fn windows(&self) -> &[WindowDetails] {

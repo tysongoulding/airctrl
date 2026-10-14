@@ -24,9 +24,11 @@ fn test_adversarial_action_command_serialization_invariants() {
         },
         ActionCommand::LaunchApp {
             app_name: "C:\\Program Files\\App\\app.exe".to_string(),
+            auto_center: true,
         },
         ActionCommand::CloseApp {
             app_name: "slack".to_string(),
+            target: "App".to_string(),
         },
         ActionCommand::CenterApp {
             app_name: "slack".to_string(),
@@ -230,6 +232,7 @@ async fn test_adversarial_event_bus_concurrent_publisher_subscriber_hammer() {
                 let _ = bus_clone.publish(DomainEvent::ActionTriggered(
                     ActionCommand::LaunchApp {
                         app_name: format!("app_{}_{}", pub_id, i),
+                        auto_center: true,
                     },
                 ));
                 tokio::task::yield_now().await;

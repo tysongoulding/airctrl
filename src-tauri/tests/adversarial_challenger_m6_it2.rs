@@ -378,7 +378,7 @@ impl SpeechToTextEngine for MockCustomEngine {
     fn is_loaded(&self) -> bool {
         true
     }
-    fn model_info(&self) -> Option<&ModelInfo> {
+    fn model_info(&self) -> Option<ModelInfo> {
         None
     }
 }

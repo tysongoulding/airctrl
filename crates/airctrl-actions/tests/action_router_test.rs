@@ -186,14 +186,14 @@ fn test_radial_dial_and_rea_inspect() {
 fn test_parameter_first_open_close_center() {
     // Open application
     let cmd_open = parse_voice_command("open slack");
-    assert_eq!(cmd_open, ActionCommand::LaunchApp { app_name: "slack".to_string() });
+    assert_eq!(cmd_open, ActionCommand::LaunchApp { app_name: "slack".to_string(), auto_center: true });
 
     // Close application
     let cmd_close_app = parse_voice_command("close slack");
-    assert_eq!(cmd_close_app, ActionCommand::CloseApp { app_name: "slack".to_string() });
+    assert_eq!(cmd_close_app, ActionCommand::CloseApp { app_name: "slack".to_string(), target: "App".to_string() });
 
     let cmd_quit_app = parse_voice_command("quit spotify");
-    assert_eq!(cmd_quit_app, ActionCommand::CloseApp { app_name: "spotify".to_string() });
+    assert_eq!(cmd_quit_app, ActionCommand::CloseApp { app_name: "spotify".to_string(), target: "App".to_string() });
 
     // Center application
     let cmd_center_app = parse_voice_command("center slack");
