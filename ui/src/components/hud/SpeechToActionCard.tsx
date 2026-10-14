@@ -137,15 +137,15 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
         {subView === "palette" ? (
           <div className="flex flex-col gap-6">
             {/* Spotlight Desktop Launcher Card */}
-            <div className="p-4 rounded-xl border border-border bg-[#18171a]/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="p-4 rounded-xl border border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#d87943]/20 border border-[#d87943]/40 flex items-center justify-center text-[#d87943] shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#d87943]/15 border border-[#d87943]/40 flex items-center justify-center text-[#d87943] shrink-0">
                   <Search className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     Spotlight Center Search Palette
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#d87943]/20 text-[#d87943] border border-[#d87943]/30">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#d87943]/15 text-[#d87943] border border-[#d87943]/30">
                       {hotkeySta}
                     </span>
                   </h3>
@@ -168,27 +168,27 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
             {/* Parameter-First Command Syntax Guide */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* [open] {application} */}
-              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+              <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between gap-3 shadow-sm">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#d87943]/20 text-[#d87943] border border-[#d87943]/40">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#d87943]/15 text-[#d87943] border border-[#d87943]/40">
                       [open]
                     </span>
                     <Maximize2 className="w-3.5 h-3.5 text-[#d87943]" />
                   </div>
-                  <h4 className="text-xs font-semibold text-foreground">Open & Center Application</h4>
+                  <h4 className="text-xs font-semibold text-foreground">Open &amp; Center Application</h4>
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Launches app and centers its window. If already open, brings to foreground and centers it.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
-                  <code className="text-[10px] font-mono text-[#d87943]">open slack</code>
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-[#d87943] font-semibold">open slack</code>
                   <button
                     onClick={() => {
                       setTestCommand("open slack");
                       handleTestDispatch("open slack");
                     }}
-                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-[#d87943] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                    className="px-2.5 py-0.5 rounded bg-muted hover:bg-[#d87943] hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                   >
                     Test
                   </button>
@@ -196,27 +196,27 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
               </div>
 
               {/* [close] {application} */}
-              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+              <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between gap-3 shadow-sm">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40">
                       [close]
                     </span>
-                    <Minimize2 className="w-3.5 h-3.5 text-rose-400" />
+                    <Minimize2 className="w-3.5 h-3.5 text-rose-500" />
                   </div>
                   <h4 className="text-xs font-semibold text-foreground">Close Application</h4>
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Finds the running window or process matching the application name and gracefully closes it.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
-                  <code className="text-[10px] font-mono text-rose-400">close slack</code>
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-semibold">close slack</code>
                   <button
                     onClick={() => {
                       setTestCommand("close slack");
                       handleTestDispatch("close slack");
                     }}
-                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-rose-600 hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                    className="px-2.5 py-0.5 rounded bg-muted hover:bg-rose-600 hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                   >
                     Test
                   </button>
@@ -224,10 +224,10 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
               </div>
 
               {/* [center] {application} */}
-              <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col justify-between gap-3 shadow-sm">
+              <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between gap-3 shadow-sm">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#527575]/25 text-[#527575] border border-[#527575]/50">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#527575]/20 text-[#527575] border border-[#527575]/50">
                       [center]
                     </span>
                     <Layout className="w-3.5 h-3.5 text-[#527575]" />
@@ -237,14 +237,14 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
                     Repositions window to the center of the display work area, preserving current dimensions.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-border/50 flex items-center justify-between">
-                  <code className="text-[10px] font-mono text-[#527575]">center slack</code>
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                  <code className="text-[10px] font-mono text-[#527575] font-semibold">center slack</code>
                   <button
                     onClick={() => {
                       setTestCommand("center slack");
                       handleTestDispatch("center slack");
                     }}
-                    className="px-2 py-0.5 rounded bg-[#1f1d21] hover:bg-[#527575] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                    className="px-2.5 py-0.5 rounded bg-muted hover:bg-[#527575] hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                   >
                     Test
                   </button>
@@ -253,17 +253,17 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
             </div>
 
             {/* 100% Hands-Free Window Sizing, 9-Way Snap & Keyboardless UI Focus Bar */}
-            <div className="p-4 rounded-xl border border-border bg-[#141315] flex flex-col gap-3 shadow-sm">
+            <div className="p-4 rounded-xl border border-border bg-card flex flex-col gap-3 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-semibold text-foreground">
                     100% Hands-Free Window Sizing, 9-Way Snap &amp; Focus Navigation
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
-                    Wake prefixes: <code>&quot;hey airctrl&quot;</code>, <code>&quot;airctrl&quot;</code>, <code>&quot;computer&quot;</code> — control everything without a mouse or keyboard
+                    Wake prefixes: <code className="text-foreground font-mono">&quot;hey airctrl&quot;</code>, <code className="text-foreground font-mono">&quot;airctrl&quot;</code>, <code className="text-foreground font-mono">&quot;computer&quot;</code> — control everything without a mouse or keyboard
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   Zero Mouse / Keyboard Required
                 </span>
               </div>
@@ -291,7 +291,7 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
                       setTestCommand(voiceCmd);
                       handleTestDispatch(voiceCmd);
                     }}
-                    className="px-2.5 py-1 rounded-md bg-[#1f1d21] hover:bg-[#d87943] hover:text-white border border-border text-[11px] font-mono text-foreground transition-all"
+                    className="px-2.5 py-1 rounded-md bg-muted/70 hover:bg-[#d87943] hover:text-white border border-border text-[11px] font-mono text-foreground transition-all shadow-sm"
                   >
                     &ldquo;{voiceCmd}&rdquo;
                   </button>
@@ -304,8 +304,8 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
               <div
                 className={`p-3 rounded-xl border text-xs font-mono transition-all ${
                   dispatchResult.success
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
-                    : "bg-rose-500/10 border-rose-500/30 text-rose-500"
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400"
                 }`}
               >
                 {dispatchResult.message}
@@ -319,10 +319,10 @@ export const SpeechToActionCard: React.FC<Props> = ({ settings, onUpdate, onAssi
                   <Sparkles className="w-3.5 h-3.5 text-[#d87943]" /> Live Interactive Search Bar Preview
                 </span>
                 <span className="text-[10px] font-mono text-muted-foreground">
-                  Test search, parameter chips & mic dictation directly in HUD
+                  Test search, parameter chips &amp; mic dictation directly in HUD
                 </span>
               </div>
-              <div className="rounded-2xl border border-border bg-[#121113] p-2">
+              <div className="rounded-2xl border border-border bg-muted/30 p-2">
                 <CenterSearchBar standalone={false} />
               </div>
             </div>

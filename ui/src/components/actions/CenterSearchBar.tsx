@@ -278,12 +278,12 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
       }`}
     >
       <div
-        className={`pointer-events-auto rounded-2xl bg-[#121113]/95 border border-[#d87943]/40 shadow-2xl shadow-[#d87943]/15 backdrop-blur-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`pointer-events-auto rounded-2xl bg-card/95 border border-[#d87943]/40 shadow-2xl shadow-[#d87943]/15 backdrop-blur-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           standalone ? "w-[640px] max-w-[94vw]" : "w-full"
         }`}
       >
         {/* Top Search Bar & Voice Input */}
-        <div className="flex items-center gap-3 p-3.5 border-b border-border/60 bg-[#161518]/90">
+        <div className="flex items-center gap-3 p-3.5 border-b border-border/60 bg-muted/40">
           <Search className="w-5 h-5 text-muted-foreground shrink-0 ml-1" />
 
           {/* Active Parameter Chip Badge */}
@@ -293,7 +293,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                 activeParam === "open"
                   ? "bg-[#d87943]/20 text-[#d87943] border border-[#d87943]/40"
                   : activeParam === "close"
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  ? "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/40"
                   : "bg-[#527575]/25 text-[#527575] border border-[#527575]/50"
               }`}
             >
@@ -314,7 +314,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
 
           {/* Real-time Voice Audio Visualizer */}
           {(isRecording || isTranscribing) && (
-            <div className="flex items-center gap-0.5 px-2 py-1 bg-[#18171a] rounded-lg border border-border shrink-0 h-7">
+            <div className="flex items-center gap-0.5 px-2 py-1 bg-muted rounded-lg border border-border shrink-0 h-7">
               {waveHeights.map((h, i) => (
                 <span
                   key={i}
@@ -335,7 +335,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                 ? "bg-[#d87943] text-white animate-pulse shadow-md shadow-[#d87943]/50"
                 : isTranscribing
                 ? "bg-[#527575] text-white"
-                : "bg-[#201e22] text-[#d87943] hover:bg-[#d87943] hover:text-white border border-[#d87943]/30"
+                : "bg-muted text-[#d87943] hover:bg-[#d87943] hover:text-white border border-[#d87943]/30"
             }`}
             title={isRecording ? "Stop listening" : "Speak voice command"}
           >
@@ -361,7 +361,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
         </div>
 
         {/* Action Parameter Selector Chips */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 bg-[#141315] text-xs">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 bg-muted/20 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-muted-foreground mr-1">Parameter:</span>
             <button
@@ -369,17 +369,17 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
               className={`px-2.5 py-1 rounded-lg font-mono text-[11px] transition-all flex items-center gap-1.5 ${
                 activeParam === "open"
                   ? "bg-[#d87943] text-white font-semibold shadow-sm"
-                  : "bg-[#1f1d21] text-muted-foreground hover:text-foreground border border-border/50"
+                  : "bg-background text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
-              <Maximize2 className="w-3 h-3" /> [open] Open & Center
+              <Maximize2 className="w-3 h-3" /> [open] Open &amp; Center
             </button>
             <button
               onClick={() => setSelectedParam("close")}
               className={`px-2.5 py-1 rounded-lg font-mono text-[11px] transition-all flex items-center gap-1.5 ${
                 activeParam === "close"
                   ? "bg-rose-600 text-white font-semibold shadow-sm"
-                  : "bg-[#1f1d21] text-muted-foreground hover:text-foreground border border-border/50"
+                  : "bg-background text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
               <Minimize2 className="w-3 h-3" /> [close] Close App
@@ -389,7 +389,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
               className={`px-2.5 py-1 rounded-lg font-mono text-[11px] transition-all flex items-center gap-1.5 ${
                 activeParam === "center"
                   ? "bg-[#527575] text-white font-semibold shadow-sm"
-                  : "bg-[#1f1d21] text-muted-foreground hover:text-foreground border border-border/50"
+                  : "bg-background text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
               <Layout className="w-3 h-3" /> [center] Center Window
@@ -406,8 +406,8 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
           <div
             className={`px-4 py-2 text-xs font-mono flex items-center justify-between transition-all ${
               statusToast.success
-                ? "bg-emerald-500/15 border-b border-emerald-500/30 text-emerald-400"
-                : "bg-rose-500/15 border-b border-rose-500/30 text-rose-400"
+                ? "bg-emerald-500/15 border-b border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                : "bg-rose-500/15 border-b border-rose-500/30 text-rose-600 dark:text-rose-400"
             }`}
           >
             <span className="flex items-center gap-1.5">
@@ -419,7 +419,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
         )}
 
         {/* Filtered Application Results List */}
-        <div className="max-h-[260px] overflow-y-auto p-2 flex flex-col gap-1">
+        <div className="max-h-[260px] overflow-y-auto p-2 flex flex-col gap-1 bg-card">
           {filteredApps.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
               <Command className="w-6 h-6 opacity-30 text-[#d87943]" />
@@ -440,19 +440,19 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                   }}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all ${
                     isSelected
-                      ? "bg-[#252229] border border-[#d87943]/50 text-foreground shadow-sm"
-                      : "hover:bg-[#1a181c] text-foreground/80 border border-transparent"
+                      ? "bg-[#d87943]/10 border border-[#d87943]/50 text-foreground shadow-sm"
+                      : "hover:bg-muted/60 text-foreground/90 border border-transparent"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-[#18171a] border border-border/60 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0">
                       {getAppIcon(app.icon)}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-xs font-semibold text-foreground truncate flex items-center gap-2">
                         {app.name}
                         {app.running && (
-                          <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-mono border border-emerald-500/20">
+                          <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-mono border border-emerald-500/20">
                             Running
                           </span>
                         )}
@@ -470,7 +470,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                         e.stopPropagation();
                         executeCommand("open", app);
                       }}
-                      className="px-2 py-1 rounded-md bg-[#18171a] hover:bg-[#d87943] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                      className="px-2 py-1 rounded-md bg-background hover:bg-[#d87943] hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                       title="Open & Center window"
                     >
                       Open
@@ -480,7 +480,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                         e.stopPropagation();
                         executeCommand("center", app);
                       }}
-                      className="px-2 py-1 rounded-md bg-[#18171a] hover:bg-[#527575] hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                      className="px-2 py-1 rounded-md bg-background hover:bg-[#527575] hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                       title="Center window"
                     >
                       Center
@@ -490,7 +490,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
                         e.stopPropagation();
                         executeCommand("close", app);
                       }}
-                      className="px-2 py-1 rounded-md bg-[#18171a] hover:bg-rose-600 hover:text-white border border-border text-[10px] font-mono text-muted-foreground transition-all"
+                      className="px-2 py-1 rounded-md bg-background hover:bg-rose-600 hover:text-white border border-border text-[10px] font-mono text-foreground transition-all"
                       title="Close application"
                     >
                       Close
@@ -503,19 +503,19 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
         </div>
 
         {/* Footer Shortcut Bar */}
-        <div className="px-4 py-2 border-t border-border/40 bg-[#121113] flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+        <div className="px-4 py-2 border-t border-border/40 bg-muted/40 flex items-center justify-between text-[11px] text-muted-foreground font-mono">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-[#1f1d21] border border-border text-[9px]">↑↓</kbd> Navigate
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-foreground text-[9px]">↑↓</kbd> Navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-[#1f1d21] border border-border text-[9px]">↵</kbd> Run
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-foreground text-[9px]">↵</kbd> Run
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-[#1f1d21] border border-border text-[9px]">Tab</kbd> Action
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-foreground text-[9px]">Tab</kbd> Action
             </span>
           </div>
-          <span className="flex items-center gap-1 text-[#d87943]">
+          <span className="flex items-center gap-1 text-[#d87943] font-semibold">
             <Sparkles className="w-3 h-3" /> Qrafthive Voice Command Palette
           </span>
         </div>

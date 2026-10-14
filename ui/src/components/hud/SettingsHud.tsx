@@ -5,9 +5,7 @@ import { SpeechToActionCard } from "./SpeechToActionCard";
 import { GesturesConfigSection } from "./GesturesConfigSection";
 import { PrivacyControlsCard } from "./PrivacyControlsCard";
 import { StatusMonitorGrid } from "./StatusMonitorGrid";
-import { OpacitySlider } from "./OpacitySlider";
 import { useTheme } from "../../hooks/useTheme";
-import { useHudOpacity } from "../../hooks/useHudOpacity";
 import { DEFAULT_SETTINGS, SettingsState, ApplicationItem } from "../../types/config";
 import { tauriApi } from "../../services/ipc";
 
@@ -46,7 +44,6 @@ const NAV_ITEMS = [
 
 export const SettingsHud: React.FC = () => {
   const { theme, setTheme } = useTheme("dark");
-  const { opacity, setOpacity } = useHudOpacity(0.95);
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [activeNav, setActiveNav] = useState<NavSection>("stt");
 
@@ -84,7 +81,6 @@ export const SettingsHud: React.FC = () => {
   return (
     <div
       className="w-full h-screen flex select-none bg-background text-foreground backdrop-blur-xl transition-colors duration-200 overflow-hidden font-sans"
-      style={{ opacity }}
     >
       {/* Lefthand Menu Navigation Bar */}
       <aside className="w-80 h-full border-r border-border bg-card/50 flex flex-col justify-between p-5 shrink-0 backdrop-blur-2xl">
@@ -203,11 +199,6 @@ export const SettingsHud: React.FC = () => {
 
         {/* Sidebar Footer Controls */}
         <div className="flex flex-col gap-3 pt-4 border-t border-border/70">
-          {/* Opacity Slider */}
-          <div className="bg-card/80 p-2.5 rounded-lg border border-border shadow-sm">
-            <OpacitySlider opacity={opacity} onChange={setOpacity} />
-          </div>
-
           {/* Theme Switcher & Status */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-md border border-border/40">

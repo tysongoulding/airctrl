@@ -10,6 +10,90 @@ export interface ApplicationItem {
   running?: boolean;
 }
 
+export interface GestureKeybindMapping {
+  gestureId: string;
+  gesture: string;
+  condition: string;
+  badge: string;
+  desc: string;
+  keybind: string;
+  action: string;
+  enabled: boolean;
+}
+
+export const DEFAULT_GESTURE_KEYBINDS: GestureKeybindMapping[] = [
+  {
+    gestureId: "pinch",
+    gesture: "Pinch (Thumb + Index)",
+    action: "left click",
+    keybind: "Left Click / Enter",
+    condition: "Euclidean distance d ≤ 0.05",
+    badge: "Primary Click",
+    desc: "Brings thumb tip (4) and index tip (8) together to confirm and execute the active radial dial sector or click.",
+    enabled: true,
+  },
+  {
+    gestureId: "pointing",
+    gesture: "Pointing Ray (Index Extended)",
+    action: "radial dial",
+    keybind: "Ctrl+Spacebar",
+    condition: "Ray vector atan2(dy, dx) from MCP (5)",
+    badge: "Spatial Pointer",
+    desc: "Projects an index finger pointing vector through polar coordinates to highlight sectors 0 through 5.",
+    enabled: true,
+  },
+  {
+    gestureId: "fist",
+    gesture: "Fist (All Fingers Curled)",
+    action: "press escape",
+    keybind: "Escape",
+    condition: "Fingertip to wrist distance < 80px",
+    badge: "Cancel / Escape",
+    desc: "Curl fingers into a closed fist to dismiss overlays or send Escape to the active window.",
+    enabled: true,
+  },
+  {
+    gestureId: "open_palm",
+    gesture: "Open Palm (Fingers Open)",
+    action: "center window",
+    keybind: "Neutral / Center",
+    condition: "All 5 fingertips extended",
+    badge: "Neutral State",
+    desc: "Keeps the dial in a neutral resting hover state (or optionally centers the active window).",
+    enabled: true,
+  },
+  {
+    gestureId: "swipe_left",
+    gesture: "Velocity Swipe Left",
+    action: "snap window left",
+    keybind: "Win+Left",
+    condition: "Palm velocity ≥ 1.2 m/s left",
+    badge: "Window Snap Left",
+    desc: "Fast leftward hand swipe snaps the focused window to the left half of your screen.",
+    enabled: true,
+  },
+  {
+    gestureId: "swipe_right",
+    gesture: "Velocity Swipe Right",
+    action: "snap window right",
+    keybind: "Win+Right",
+    condition: "Palm velocity ≥ 1.2 m/s right",
+    badge: "Window Snap Right",
+    desc: "Fast rightward hand swipe snaps the focused window to the right half of your screen.",
+    enabled: true,
+  },
+  {
+    gestureId: "v_sign",
+    gesture: "V-Sign (Peace Sign)",
+    action: "next window",
+    keybind: "Alt+Tab",
+    condition: "Index & Middle extended, others curled",
+    badge: "Switch Window / Mute",
+    desc: "Hold up index and middle fingers to cycle windows or toggle microphone mute hands-free.",
+    enabled: true,
+  },
+];
+
 /**
  * Settings state matching airctrl-core::AirCtrlConfig and tests.
  */
@@ -39,6 +123,9 @@ export interface SettingsState {
   deadzone_radius: number; // 0.10
   angular_hysteresis: number; // 0.05
   dial_timeout_secs: number; // 3.0
+  swap_hand_labels?: boolean; // false (camera perspective corrected by default)
+  live_gesture_execution?: boolean; // true
+  gesture_keybinds?: GestureKeybindMapping[];
 
   // Meeting Privacy Controls, Meetily & Virtual Camera Splitter
   camera_auto_kill: boolean; // false when virtual camera splitter active
@@ -57,7 +144,7 @@ export interface SettingsState {
 
   // HUD UI Customization
   theme: "dark" | "light" | "system";
-  hud_opacity: number; // 0.0 to 1.0, default 0.95
+  hud_opacity: number; // 1.0
 }
 
 export type SectorIconType = "window" | "x" | "layout" | "cpu" | "list" | "gear" | "terminal" | "mic" | "play";
@@ -94,10 +181,13 @@ export const DEFAULT_SETTINGS: SettingsState = {
   deadzone_radius: 0.1,
   angular_hysteresis: 0.05,
   dial_timeout_secs: 3.0,
+  swap_hand_labels: false,
+  live_gesture_execution: true,
+  gesture_keybinds: DEFAULT_GESTURE_KEYBINDS,
   camera_auto_kill: true,
   compliance_audio_enabled: true,
   dial_sectors: DEFAULT_DIAL_SECTORS,
   lan_port: 8080,
   theme: "dark",
-  hud_opacity: 0.95,
+  hud_opacity: 1.0,
 };
