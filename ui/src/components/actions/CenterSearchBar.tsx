@@ -133,15 +133,38 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
     };
   }, [updateWaveform]);
 
-  // Execute parameter-first command
+  const recognitionRef = useRef<any>(null);
+  const liveTranscriptRef = useRef<string>("");
+  const samplesRef = useRef<number[]>([]);
+
+  // Execute parameter-first or full voice command
   const executeCommand = async (param: ActionParam, targetApp?: ApplicationItem | string) => {
     const appName = typeof targetApp === "string" ? targetApp : targetApp?.name || cleanQuery || "current window";
-    const fullCommand = `${param} ${appName}`.trim();
+    const lower = appName.trim().toLowerCase();
+    const isDirectVoiceCommand =
+      lower.startsWith("snap ") ||
+      lower.startsWith("maximize") ||
+      lower.startsWith("minimize") ||
+      lower.startsWith("restore") ||
+      lower.startsWith("fullscreen") ||
+      lower.startsWith("resize ") ||
+      lower.startsWith("make window") ||
+      lower.startsWith("next ") ||
+      lower.startsWith("previous ") ||
+      lower.startsWith("focus ") ||
+      lower.startsWith("switch to ") ||
+      lower.startsWith("press ") ||
+      lower.startsWith("scroll ") ||
+      lower.includes("click");
+
+    const fullCommand = isDirectVoiceCommand ? appName.trim() : `${param} ${appName}`.trim();
 
     try {
       const res = await tauriApi.triggerAction(fullCommand);
       let feedback = "";
-      if (param === "open") {
+      if (isDirectVoiceCommand) {
+        feedback = `Executed "${fullCommand}"`;
+      } else if (param === "open") {
         feedback = `Opened & centered ${appName}`;
       } else if (param === "close") {
         feedback = `Closed ${appName}`;
@@ -160,7 +183,7 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
         } else {
           setStatusToast(null);
         }
-      }, 1500);
+      }, 1800);
     } catch (err: any) {
       setStatusToast({
         success: false,
@@ -177,32 +200,82 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
       setIsRecording(false);
       setIsTranscribing(true);
 
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+        recognitionRef.current = null;
+      }
+
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((t) => t.stop());
         mediaStreamRef.current = null;
       }
       if (audioCtxRef.current) {
-        audioCtxRef.current.close();
+        audioCtxRef.current.close().catch(() => {});
         audioCtxRef.current = null;
       }
 
       try {
-        const res = await tauriApi.stopRecording();
+        await new Promise((r) => setTimeout(r, 120));
+        const spokenText = liveTranscriptRef.current.trim();
+        const captured = samplesRef.current.slice(0, 3200);
+        const res = await tauriApi.stopRecording({
+          samples: captured.length > 0 ? captured : undefined,
+          transcript: spokenText || undefined,
+        });
         setIsTranscribing(false);
-        if (res && res.text) {
-          const spoken = res.text.trim();
+        const spoken = (spokenText || res?.text || "").trim();
+        if (spoken) {
           setQuery(spoken);
           const parsed = parsePrefix(spoken);
           await executeCommand(parsed.param, parsed.cleanQuery);
         }
       } catch (err) {
         setIsTranscribing(false);
-        console.warn("STT stop notice:", err);
+        const spoken = liveTranscriptRef.current.trim();
+        if (spoken) {
+          setQuery(spoken);
+          const parsed = parsePrefix(spoken);
+          await executeCommand(parsed.param, parsed.cleanQuery);
+        } else {
+          console.warn("STT stop notice:", err);
+        }
       }
     } else {
       // Start recording
       setIsRecording(true);
       setStatusToast(null);
+      liveTranscriptRef.current = "";
+      samplesRef.current = [];
+
+      const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = "en-US";
+          rec.onresult = (event: any) => {
+            let fullText = "";
+            for (let i = 0; i < event.results.length; i++) {
+              fullText += event.results[i][0].transcript;
+            }
+            const cleaned = fullText.trim();
+            if (cleaned) {
+              liveTranscriptRef.current = cleaned;
+              setQuery(cleaned);
+            }
+          };
+          rec.onerror = () => {};
+          rec.start();
+          recognitionRef.current = rec;
+        } catch {
+          // ignore
+        }
+      }
 
       try {
         if (navigator?.mediaDevices?.getUserMedia) {
@@ -221,6 +294,16 @@ export const CenterSearchBar: React.FC<Props> = ({ onClose, standalone = true })
           analyser.fftSize = 64;
           source.connect(analyser);
           analyserRef.current = analyser;
+
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+          processor.onaudioprocess = (e) => {
+            const input = e.inputBuffer.getChannelData(0);
+            for (let i = 0; i < input.length; i++) {
+              samplesRef.current.push(input[i]);
+            }
+          };
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
         }
         await tauriApi.startRecording();
       } catch (err) {

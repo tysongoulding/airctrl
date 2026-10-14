@@ -115,3 +115,33 @@ pub async fn navigate_ui(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn send_keybind(
+    bridge: State<'_, IpcBridge>,
+    args: Option<Value>,
+) -> Result<Value, String> {
+    bridge
+        .invoke("sendKeybind", args)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn move_pointer(
+    bridge: State<'_, IpcBridge>,
+    args: Option<Value>,
+) -> Result<Value, String> {
+    bridge
+        .invoke("movePointer", args)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn click_pointer(
+    bridge: State<'_, IpcBridge>,
+    args: Option<Value>,
+) -> Result<Value, String> {
+    bridge
+        .invoke("clickPointer", args)
+        .map_err(|e| e.to_string())
+}
+

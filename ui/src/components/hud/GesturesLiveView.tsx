@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Hand, Camera, CameraOff, Loader2, FlipHorizontal, Zap, Play, Sliders, CheckCircle2 } from "lucide-react";
+import { Hand, Camera, CameraOff, Loader2, FlipHorizontal, Zap, Play, Sliders, CheckCircle2, Video, Eye, EyeOff, MousePointer } from "lucide-react";
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 import { SettingsState, DEFAULT_GESTURE_KEYBINDS, GestureKeybindMapping } from "../../types/config";
 import { tauriApi } from "../../services/ipc";
@@ -43,6 +43,7 @@ const HAND_CONNECTIONS = [
 
 export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKeybindsTab }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const meetingVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -53,6 +54,9 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
   const [modelLoading, setModelLoading] = useState(false);
   const [modelReady, setModelReady] = useState(false);
   const [simulationMode, setSimulationMode] = useState(false);
+  const [dualStreamView, setDualStreamView] = useState(true);
+  const [airMouseEnabled, setAirMouseEnabled] = useState(false);
+  const [framesFannedOut, setFramesFannedOut] = useState(0);
 
   const [cameraDims, setCameraDims] = useState<{ width: number; height: number }>({ width: 1280, height: 720 });
   const [trackedHands, setTrackedHands] = useState<TrackedHandInfo[]>([]);
@@ -67,14 +71,18 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
 
   const swapHandLabels = settings?.swap_hand_labels ?? false;
   const liveExecution = settings?.live_gesture_execution ?? true;
+  const privacyMuted = settings?.virtual_camera_privacy_mute ?? false;
   const keybinds: GestureKeybindMapping[] = settings?.gesture_keybinds || DEFAULT_GESTURE_KEYBINDS;
 
-  // FPS & Swipe velocity tracking
+  // FPS, Swipe velocity, Gesture stability & Pointer throttling
   const frameCountRef = useRef(0);
+  const totalFramesRef = useRef(0);
   const lastFpsTimeRef = useRef(performance.now());
   const simulationAngleRef = useRef(0);
   const lastWristXRef = useRef<Record<string, { x: number; t: number }>>({});
   const lastFireTimeRef = useRef<number>(0);
+  const lastPointerTimeRef = useRef<number>(0);
+  const gestureStreakRef = useRef<Record<string, { id: string; count: number }>>({});
 
   const triggerBoundGesture = useCallback(
     async (gestureId: string, handLabel: string) => {
@@ -82,7 +90,7 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
       if (!mapping || !mapping.enabled) return;
 
       const now = performance.now();
-      if (now - lastFireTimeRef.current < 1200) return;
+      if (now - lastFireTimeRef.current < 1100) return;
       lastFireTimeRef.current = now;
 
       setLastTriggeredEvent({
@@ -97,7 +105,7 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
         if (mapping.action.toLowerCase() === "radial dial") {
           await tauriApi.toggleRadialDial();
         } else {
-          await tauriApi.triggerAction(mapping.action);
+          await tauriApi.triggerAction(mapping.action, { keybind: mapping.keybind });
         }
       } catch (err) {
         console.warn("Gesture trigger notice:", err);
@@ -175,7 +183,7 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
     }
   };
 
-  // Start Webcam Stream with high-definition resolution matching display
+  // Start Webcam Stream and fan out to Consumer 1 (MediaPipe) + Consumer 2 (Meeting Virtual Cam)
   const startCamera = async () => {
     setCameraError(null);
     try {
@@ -193,6 +201,9 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
         audio: false,
       });
       streamRef.current = stream;
+      (window as any).__AIRCTRL_CAMERA_STREAM__ = stream;
+      window.dispatchEvent(new CustomEvent("airctrl-camera-stream", { detail: { active: true } }));
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -204,6 +215,10 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
           canvasRef.current.width = vw;
           canvasRef.current.height = vh;
         }
+      }
+      if (meetingVideoRef.current) {
+        meetingVideoRef.current.srcObject = stream;
+        meetingVideoRef.current.play().catch(() => {});
       }
       setCameraActive(true);
       setSimulationMode(false);
@@ -221,13 +236,27 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    (window as any).__AIRCTRL_CAMERA_STREAM__ = null;
+    window.dispatchEvent(new CustomEvent("airctrl-camera-stream", { detail: { active: false } }));
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+    }
+    if (meetingVideoRef.current) {
+      meetingVideoRef.current.srcObject = null;
     }
     setCameraActive(false);
     setTrackedHands([]);
     setMeasuredFps(0);
   };
+
+  useEffect(() => {
+    if (cameraActive && streamRef.current && meetingVideoRef.current) {
+      if (meetingVideoRef.current.srcObject !== streamRef.current) {
+        meetingVideoRef.current.srcObject = streamRef.current;
+        meetingVideoRef.current.play().catch(() => {});
+      }
+    }
+  }, [cameraActive, dualStreamView, privacyMuted]);
 
   // Draw 21-landmark skeleton for an individual hand
   const drawHandSkeleton = (
@@ -324,12 +353,15 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
     }
 
     frameCountRef.current += 1;
+    totalFramesRef.current += 1;
     const now = performance.now();
     const elapsed = now - lastFpsTimeRef.current;
     if (elapsed >= 1000) {
       setMeasuredFps(Math.round((frameCountRef.current * 1000) / elapsed));
+      setFramesFannedOut(totalFramesRef.current);
       frameCountRef.current = 0;
       lastFpsTimeRef.current = now;
+      tauriApi.feedCameraFrame(totalFramesRef.current).catch(() => {});
     }
 
     const width = canvas.width;
@@ -358,11 +390,6 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
               z: pt.z || 0,
             }));
 
-            // Opposite hand labeling fix: MediaPipe's categoryName in unflipped video feed
-            // is opposite to the user's mirrored camera perspective.
-            // Previously `cat === "Left" ? "Right Hand" : "Left Hand"` inverted them.
-            // Now `cat === "Right"` maps to `"Right Hand"` and `cat === "Left"` maps to `"Left Hand"`
-            // (with optional swapHandLabels override).
             let side: "Right Hand" | "Left Hand" = handIdx === 0 ? "Left Hand" : "Right Hand";
             if (detections.handednesses && detections.handednesses[handIdx] && detections.handednesses[handIdx][0]) {
               const cat = detections.handednesses[handIdx][0].categoryName;
@@ -374,16 +401,30 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
               }
             }
 
-            // Pinch Calculation (Thumb Tip 4 to Index Tip 8)
+            // Pinch Calculation (Thumb Tip 4 to Index Tip 8) - normalized by both frame width and palm size
             const pThumb = handLandmarks[4];
             const pIndex = handLandmarks[8];
             const pIndexMcp = handLandmarks[5];
             const pWrist = handLandmarks[0];
+            const palmSize = Math.max(20, Math.hypot(handLandmarks[9].x - pWrist.x, handLandmarks[9].y - pWrist.y));
 
             const dx = pThumb.x - pIndex.x;
             const dy = pThumb.y - pIndex.y;
             const pinchDist = Math.hypot(dx, dy) / width;
-            const isPinching = pinchDist <= 0.05;
+            const pinchPalmRatio = Math.hypot(dx, dy) / palmSize;
+            const isPinching = pinchDist <= 0.055 || pinchPalmRatio <= 0.36;
+
+            // Air Mouse Cursor Mode: move real OS cursor with primary hand index finger tip
+            if (airMouseEnabled && handIdx === 0 && now - lastPointerTimeRef.current >= 32) {
+              lastPointerTimeRef.current = now;
+              const scrW = window.screen?.width || 1920;
+              const scrH = window.screen?.height || 1080;
+              const normX = Math.max(0, Math.min(1, (pIndex.x / width - 0.1) / 0.8));
+              const normY = Math.max(0, Math.min(1, (pIndex.y / height - 0.1) / 0.8));
+              const targetX = Math.round(normX * scrW);
+              const targetY = Math.round(normY * scrH);
+              tauriApi.movePointer(targetX, targetY).catch(() => {});
+            }
 
             // Pointing Ray Vector
             const rayDx = pIndex.x - pIndexMcp.x;
@@ -394,15 +435,24 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
             // Horizontal Velocity Swipe Detection
             let swipeDetected: "swipe_left" | "swipe_right" | null = null;
             const prevWrist = lastWristXRef.current[side];
-            if (prevWrist && now - prevWrist.t > 40 && now - prevWrist.t < 250) {
+            if (prevWrist && now - prevWrist.t > 35 && now - prevWrist.t < 280) {
               const normVelX = (pWrist.x - prevWrist.x) / width / ((now - prevWrist.t) / 1000);
-              if (normVelX <= -1.2) {
+              if (normVelX <= -1.05) {
                 swipeDetected = "swipe_left";
-              } else if (normVelX >= 1.2) {
+              } else if (normVelX >= 1.05) {
                 swipeDetected = "swipe_right";
               }
             }
             lastWristXRef.current[side] = { x: pWrist.x, t: now };
+
+            // Scale-Invariant Finger Extension Detection (Tip vs PIP distance from Wrist)
+            const distFromWrist = (idx: number) =>
+              Math.hypot(handLandmarks[idx].x - pWrist.x, handLandmarks[idx].y - pWrist.y);
+
+            const indexExtended = distFromWrist(8) > distFromWrist(6) * 1.12;
+            const middleExtended = distFromWrist(12) > distFromWrist(10) * 1.12;
+            const ringExtended = distFromWrist(16) > distFromWrist(14) * 1.12;
+            const pinkyExtended = distFromWrist(20) > distFromWrist(18) * 1.12;
 
             // Gesture Classification
             let gestureId = "open_palm";
@@ -416,25 +466,25 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
             } else if (isPinching) {
               gestureId = "pinch";
               gesture = "Pinch (Click)";
-            } else {
-              const indexDist = Math.hypot(pIndex.x - pWrist.x, pIndex.y - pWrist.y);
-              const middleDist = Math.hypot(handLandmarks[12].x - pWrist.x, handLandmarks[12].y - pWrist.y);
-              const ringDist = Math.hypot(handLandmarks[16].x - pWrist.x, handLandmarks[16].y - pWrist.y);
-              const pinkyDist = Math.hypot(handLandmarks[20].x - pWrist.x, handLandmarks[20].y - pWrist.y);
-
-              if (indexDist > 90 && middleDist > 90 && ringDist < 75 && pinkyDist < 75) {
-                gestureId = "v_sign";
-                gesture = "V-Sign (Peace)";
-              } else if (indexDist > 90 && middleDist < 80 && ringDist < 70 && pinkyDist < 70) {
-                gestureId = "pointing";
-                gesture = `Pointing (Sector ${sector})`;
-              } else if (indexDist < 80 && middleDist < 80 && ringDist < 70 && pinkyDist < 70) {
-                gestureId = "fist";
-                gesture = "Fist (Dismiss)";
-              }
+            } else if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
+              gestureId = "v_sign";
+              gesture = "V-Sign (Peace)";
+            } else if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+              gestureId = "pointing";
+              gesture = `Pointing (Sector ${sector})`;
+            } else if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+              gestureId = "fist";
+              gesture = "Fist (Dismiss)";
             }
 
-            if (liveExecution && gestureId !== "open_palm") {
+            // Require 3 consecutive frames for static poses (or immediate for swipes) before firing OS action
+            const prevStreak = gestureStreakRef.current[side];
+            const nextCount =
+              prevStreak && prevStreak.id === gestureId ? prevStreak.count + 1 : 1;
+            gestureStreakRef.current[side] = { id: gestureId, count: nextCount };
+
+            const isSwipe = gestureId === "swipe_left" || gestureId === "swipe_right";
+            if (liveExecution && gestureId !== "open_palm" && (isSwipe || nextCount === 3)) {
               triggerBoundGesture(gestureId, side);
             }
 
@@ -576,7 +626,7 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
     }
 
     animFrameRef.current = requestAnimationFrame(renderFrame);
-  }, [simulationMode, modelLoading, cameraActive, swapHandLabels, liveExecution, triggerBoundGesture]);
+  }, [simulationMode, modelLoading, cameraActive, swapHandLabels, liveExecution, airMouseEnabled, triggerBoundGesture]);
 
   useEffect(() => {
     if (cameraActive) {
@@ -613,12 +663,20 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
     };
   }, []);
 
+  const togglePrivacySlate = async () => {
+    const nextMuted = !privacyMuted;
+    await tauriApi.setVirtualCameraPrivacy(nextMuted, false).catch(() => {});
+    if (onUpdate) {
+      onUpdate({ virtual_camera_privacy_mute: nextMuted });
+    }
+  };
+
   const rightHand = trackedHands.find((h) => h.side === "Right Hand");
   const leftHand = trackedHands.find((h) => h.side === "Left Hand");
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Live Video Tracking & Skeleton Viewport */}
+      {/* Live Video Tracking & Dual-Stream Virtual Camera Splitter Viewport */}
       <div className="p-6 rounded-2xl border border-border bg-card/60 backdrop-blur-xl flex flex-col gap-4 shadow-sm w-full">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
           <div className="flex items-center gap-3">
@@ -627,20 +685,48 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
             </div>
             <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                Dual-Hand Real-Time 21-Landmark Tracking
+                Dual-Camera Stream &amp; 21-Landmark Hand Tracking
                 {modelReady && (
                   <span className="px-2 py-0.5 text-[10px] rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-mono">
-                    2 Hands Active
+                    2 Hands + Virtual Cam Active
                   </span>
                 )}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Camera-perspective handedness calibrated • Test hand motions live &amp; trigger custom keybinds
+                Simultaneously runs Consumer 1 (MediaPipe Hand Gestures) &amp; Consumer 2 (Clean Meeting Video Stream) with zero lock contention
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Dual Stream Split View Toggle */}
+            <button
+              onClick={() => setDualStreamView(!dualStreamView)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                dualStreamView
+                  ? "bg-[#d87943]/15 border-[#d87943]/40 text-[#d87943] font-semibold"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground"
+              }`}
+              title="Show both Consumer 1 (Hand Gesture Tracker) and Consumer 2 (Outbound Meeting Video Stream) side by side"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>{dualStreamView ? "Dual Camera View: ON" : "Dual Camera View: OFF"}</span>
+            </button>
+
+            {/* Air Mouse Cursor Toggle */}
+            <button
+              onClick={() => setAirMouseEnabled(!airMouseEnabled)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                airMouseEnabled
+                  ? "bg-blue-500/15 border-blue-500/40 text-blue-500 font-semibold"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground"
+              }`}
+              title="Move your Windows mouse cursor using your index finger and click by pinching"
+            >
+              <MousePointer className="w-3.5 h-3.5" />
+              <span>{airMouseEnabled ? "Air Mouse: ON" : "Air Mouse: OFF"}</span>
+            </button>
+
             {/* Flip L/R Hand Labels Button */}
             <button
               onClick={() => onUpdate && onUpdate({ swap_hand_labels: !swapHandLabels })}
@@ -699,7 +785,7 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
               <span className="text-[#d87943] font-bold">{lastTriggeredEvent.gesture}</span>
               <span className="text-muted-foreground">&rarr;</span>
               <span className="px-2 py-0.5 rounded bg-background border border-border text-foreground font-semibold">
-                Keybind: {lastTriggeredEvent.keybind}
+                Executed Keybind: {lastTriggeredEvent.keybind}
               </span>
               <span className="text-emerald-600 dark:text-emerald-400">
                 ({lastTriggeredEvent.action})
@@ -709,162 +795,227 @@ export const GesturesLiveView: React.FC<Props> = ({ settings, onUpdate, onOpenKe
           </div>
         )}
 
-        {/* Responsive Viewport Display Container matching camera aspect ratio */}
-        <div
-          className="relative w-full rounded-xl overflow-hidden bg-black border border-border flex items-center justify-center shadow-inner transition-all duration-200"
-          style={{
-            aspectRatio: `${cameraDims.width} / ${cameraDims.height}`,
-            maxHeight: "calc(100vh - 340px)",
-          }}
-        >
-          <video
-            ref={videoRef}
-            className={`absolute inset-0 w-full h-full object-contain transform -scale-x-100 transition-opacity duration-300 ${
-              cameraActive && streamRef.current ? "opacity-90" : "opacity-0"
-            }`}
-          />
-          <canvas
-            ref={canvasRef}
-            width={cameraDims.width}
-            height={cameraDims.height}
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-          />
+        {/* Dual Camera Stream Container: Consumer 1 (Hand Tracker) + Consumer 2 (Clean Meeting Feed) */}
+        <div className={`grid gap-4 ${dualStreamView && cameraActive ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}>
+          {/* Stream 1: Consumer 1 (MediaPipe 21-Landmark Hand Tracking) */}
+          <div
+            className="relative w-full rounded-xl overflow-hidden bg-black border border-border flex items-center justify-center shadow-inner transition-all duration-200"
+            style={{
+              aspectRatio: `${cameraDims.width} / ${cameraDims.height}`,
+              maxHeight: dualStreamView && cameraActive ? "380px" : "calc(100vh - 340px)",
+            }}
+          >
+            <video
+              ref={videoRef}
+              className={`absolute inset-0 w-full h-full object-contain transform -scale-x-100 transition-opacity duration-300 ${
+                cameraActive && streamRef.current ? "opacity-90" : "opacity-0"
+              }`}
+            />
+            <canvas
+              ref={canvasRef}
+              width={cameraDims.width}
+              height={cameraDims.height}
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            />
 
-          {!cameraActive && (
-            <div className="flex flex-col items-center gap-3 text-center p-6 z-10">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-foreground shadow-sm">
-                <Camera className="w-6 h-6" />
+            {!cameraActive && (
+              <div className="flex flex-col items-center gap-3 text-center p-6 z-10">
+                <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-foreground shadow-sm">
+                  <Camera className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Dual-Camera Stream &amp; Hand Tracking Inactive</p>
+                  <p className="text-xs text-zinc-400 max-w-md mt-1">
+                    Click &quot;Enable Live Tracking&quot; to start the Physical Camera Splitter. Stream 1 tracks your 21 hand landmarks while Stream 2 outputs a clean feed for Zoom/Teams/Meet.
+                  </p>
+                </div>
+                <button
+                  onClick={startCamera}
+                  className="mt-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-2"
+                >
+                  <Camera className="w-4 h-4" /> Start Dual Camera Stream
+                </button>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Dual-Hand Camera Tracking Inactive</p>
-                <p className="text-xs text-zinc-400 max-w-md mt-1">
-                  Click &quot;Enable Live Tracking&quot; to test your webcam and hand motions (Pinch, Pointing, Fist, V-Sign, Swipe Left/Right) in real time.
-                </p>
-              </div>
-              <button
-                onClick={startCamera}
-                className="mt-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-2"
-              >
-                <Camera className="w-4 h-4" /> Start Live Feed
-              </button>
-            </div>
-          )}
+            )}
 
-          {/* Top Left: Tracking Engine Status & Live Specs */}
-          {cameraActive && (
-            <div className="absolute top-4 left-4 flex items-center gap-2.5 bg-background/85 backdrop-blur-md px-3.5 py-2 rounded-lg border border-border text-xs font-mono shadow-md">
-              <div
-                className={`w-2.5 h-2.5 rounded-full ${
-                  simulationMode
-                    ? "bg-amber-500 animate-pulse"
-                    : trackedHands.length > 0
-                    ? "bg-emerald-500 animate-pulse"
-                    : "bg-blue-400"
+            {/* Top Left: Stream 1 Label & FPS */}
+            {cameraActive && (
+              <div className="absolute top-3 left-3 flex items-center gap-2 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-border text-[11px] font-mono shadow-md">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    simulationMode
+                      ? "bg-amber-500 animate-pulse"
+                      : trackedHands.length > 0
+                      ? "bg-emerald-500 animate-pulse"
+                      : "bg-blue-400"
+                  }`}
+                />
+                <span className="text-foreground font-semibold">
+                  Stream 1: MediaPipe Hands ({trackedHands.length}/2)
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-foreground font-bold">{measuredFps} FPS</span>
+              </div>
+            )}
+
+            {/* Top Right: Individual Hand Badges */}
+            {cameraActive && (
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {modelLoading && (
+                  <div className="flex items-center gap-1.5 bg-background/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-border text-[11px] font-mono">
+                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                    <span className="text-foreground">Loading...</span>
+                  </div>
+                )}
+
+                {/* Left Hand Indicator Badge */}
+                <div
+                  className={`flex items-center gap-1.5 backdrop-blur-md px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all ${
+                    leftHand
+                      ? "bg-background/90 border-[#527575] text-[#527575] shadow-sm font-semibold"
+                      : "bg-background/60 border-border/40 text-muted-foreground opacity-60"
+                  }`}
+                >
+                  <span>🤚 L:</span>
+                  <span className="font-bold">{leftHand ? leftHand.gesture : "None"}</span>
+                </div>
+
+                {/* Right Hand Indicator Badge */}
+                <div
+                  className={`flex items-center gap-1.5 backdrop-blur-md px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all ${
+                    rightHand
+                      ? "bg-background/90 border-primary text-primary shadow-sm font-semibold"
+                      : "bg-background/60 border-border/40 text-muted-foreground opacity-60"
+                  }`}
+                >
+                  <span>✋ R:</span>
+                  <span className="font-bold">{rightHand ? rightHand.gesture : "None"}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Overlay: Dual Hand Spatial Metrics */}
+            {cameraActive && trackedHands.length > 0 && (
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-background/85 backdrop-blur-md px-4 py-2 rounded-xl border border-border text-[11px] font-mono shadow-md">
+                {/* Left Hand Details */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[#527575] font-bold">L:</span>
+                  {leftHand ? (
+                    <>
+                      <span>
+                        Pinch:{" "}
+                        <b className={leftHand.pinchDistance <= 0.055 ? "text-emerald-500" : "text-foreground"}>
+                          {leftHand.pinchDistance.toFixed(3)}
+                        </b>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted border border-border text-foreground font-bold">
+                        S{leftHand.activeSector}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground italic">Idle</span>
+                  )}
+                </div>
+
+                <div className="h-3.5 w-[1px] bg-border/60" />
+
+                {/* Right Hand Details */}
+                <div className="flex items-center gap-3">
+                  <span className="text-primary font-bold">R:</span>
+                  {rightHand ? (
+                    <>
+                      <span>
+                        Pinch:{" "}
+                        <b className={rightHand.pinchDistance <= 0.055 ? "text-emerald-500" : "text-foreground"}>
+                          {rightHand.pinchDistance.toFixed(3)}
+                        </b>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted border border-border text-foreground font-bold">
+                        S{rightHand.activeSector}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground italic">Idle</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stream 2: Consumer 2 (Clean Outbound Meeting Video / AirCtrl Virtual Camera) */}
+          {dualStreamView && cameraActive && (
+            <div
+              className="relative w-full rounded-xl overflow-hidden bg-zinc-950 border border-[#d87943]/40 flex items-center justify-center shadow-inner transition-all duration-200"
+              style={{
+                aspectRatio: `${cameraDims.width} / ${cameraDims.height}`,
+                maxHeight: "380px",
+              }}
+            >
+              <video
+                ref={meetingVideoRef}
+                muted
+                playsInline
+                className={`absolute inset-0 w-full h-full object-contain transform -scale-x-100 transition-opacity duration-300 ${
+                  !privacyMuted && streamRef.current ? "opacity-100" : "opacity-0"
                 }`}
               />
-              <span className="text-foreground font-semibold">
-                {simulationMode
-                  ? "Simulation Demo"
-                  : trackedHands.length === 2
-                  ? "Both Hands Tracked (2/2)"
-                  : trackedHands.length === 1
-                  ? "1 Hand Tracked (1/2)"
-                  : modelLoading
-                  ? "Loading Model..."
-                  : "Active (Searching...)"}
-              </span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-foreground font-bold">{measuredFps} FPS</span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-muted-foreground">{cameraDims.width}×{cameraDims.height}</span>
-            </div>
-          )}
 
-          {/* Top Right: Individual Hand Badges */}
-          {cameraActive && (
-            <div className="absolute top-4 right-4 flex items-center gap-2">
-              {modelLoading && (
-                <div className="flex items-center gap-1.5 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-border text-xs font-mono">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span className="text-foreground">Loading Vision Model...</span>
+              {privacyMuted && (
+                <div className="flex flex-col items-center gap-2 text-center p-6 z-10">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                    <EyeOff className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-semibold text-white">
+                    Meeting Feed Muted (Privacy Slate Active)
+                  </p>
+                  <p className="text-[11px] text-zinc-400 max-w-xs">
+                    Zoom / Teams / Meet sees this privacy slate while Stream 1 continues tracking your hand gestures live!
+                  </p>
                 </div>
               )}
 
-              {/* Left Hand Indicator Badge */}
-              <div
-                className={`flex items-center gap-2 backdrop-blur-md px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
-                  leftHand
-                    ? "bg-background/90 border-[#527575] text-[#527575] shadow-sm font-semibold"
-                    : "bg-background/60 border-border/40 text-muted-foreground opacity-60"
-                }`}
-              >
-                <span>🤚 Left Hand:</span>
-                <span className="font-bold">{leftHand ? leftHand.gesture : "Searching"}</span>
+              {/* Top Left: Stream 2 Badge */}
+              <div className="absolute top-3 left-3 flex items-center gap-2 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-border text-[11px] font-mono shadow-md">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    privacyMuted ? "bg-amber-500" : "bg-emerald-500 animate-pulse"
+                  }`}
+                />
+                <span className="text-foreground font-semibold">
+                  Stream 2: AirCtrl Virtual Camera (Meeting Feed)
+                </span>
               </div>
 
-              {/* Right Hand Indicator Badge */}
-              <div
-                className={`flex items-center gap-2 backdrop-blur-md px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
-                  rightHand
-                    ? "bg-background/90 border-primary text-primary shadow-sm font-semibold"
-                    : "bg-background/60 border-border/40 text-muted-foreground opacity-60"
-                }`}
-              >
-                <span>✋ Right Hand:</span>
-                <span className="font-bold">{rightHand ? rightHand.gesture : "Searching"}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Overlay: Dual Hand Spatial Metrics */}
-          {cameraActive && trackedHands.length > 0 && (
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-background/85 backdrop-blur-md px-5 py-2.5 rounded-xl border border-border text-xs font-mono shadow-md">
-              {/* Left Hand Details */}
-              <div className="flex items-center gap-4">
-                <span className="text-[#527575] font-bold">LEFT HAND:</span>
-                {leftHand ? (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Pinch:</span>
-                      <span className={`font-bold ${leftHand.pinchDistance <= 0.05 ? "text-emerald-500" : "text-foreground"}`}>
-                        {leftHand.pinchDistance.toFixed(3)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Sector:</span>
-                      <span className="px-2 py-0.5 rounded bg-muted border border-border text-foreground font-bold">
-                        Sector {leftHand.activeSector}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground italic">Hand not in frame</span>
-                )}
+              {/* Top Right: Selective Privacy Slate Toggle */}
+              <div className="absolute top-3 right-3">
+                <button
+                  onClick={togglePrivacySlate}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold border transition-all shadow-sm ${
+                    privacyMuted
+                      ? "bg-amber-500 text-black border-amber-400"
+                      : "bg-background/85 text-foreground border-border hover:bg-muted"
+                  }`}
+                >
+                  {privacyMuted ? (
+                    <>
+                      <EyeOff className="w-3 h-3" /> Privacy Slate: ON
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3 h-3 text-emerald-500" /> Meeting Video: LIVE
+                    </>
+                  )}
+                </button>
               </div>
 
-              <div className="h-4 w-[1px] bg-border/60" />
-
-              {/* Right Hand Details */}
-              <div className="flex items-center gap-4">
-                <span className="text-primary font-bold">RIGHT HAND:</span>
-                {rightHand ? (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Pinch:</span>
-                      <span className={`font-bold ${rightHand.pinchDistance <= 0.05 ? "text-emerald-500" : "text-foreground"}`}>
-                        {rightHand.pinchDistance.toFixed(3)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Sector:</span>
-                      <span className="px-2 py-0.5 rounded bg-muted border border-border text-foreground font-bold">
-                        Sector {rightHand.activeSector}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground italic">Hand not in frame</span>
-                )}
+              {/* Bottom Bar: Fan-out Telemetry */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-background/85 backdrop-blur-md px-4 py-2 rounded-xl border border-border text-[11px] font-mono shadow-md">
+                <span className="text-emerald-500 font-semibold">
+                  Zero Lock Contention • Clean Feed (No Skeleton Overlay)
+                </span>
+                <span className="text-muted-foreground">
+                  Frames Fanned Out: <b className="text-foreground">{framesFannedOut}</b>
+                </span>
               </div>
             </div>
           )}

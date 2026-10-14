@@ -77,7 +77,51 @@ impl IpcBridge {
             }
 
             "stopRecording" => {
-                let text = self.state.stop_recording().map_err(IpcError::ExecutionFailed)?;
+                if let Some(samples) = args.get("samples").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter()
+                            .filter_map(Value::as_f64)
+                            .map(|f| f as f32)
+                            .collect::<Vec<f32>>()
+                    })
+                }) {
+                    if !samples.is_empty() {
+                        self.state.audio_buffer.push(&samples);
+                    }
+                }
+
+                let explicit_transcript = args
+                    .get("transcript")
+                    .and_then(Value::as_str)
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty());
+
+                let text = if let Some(raw_text) = explicit_transcript {
+                    self.state.is_recording.store(false, std::sync::atomic::Ordering::SeqCst);
+                    let _ = self.state.audio_buffer.pop_all();
+                    let processed_text = self.state.dictionary_engine.read().replace_words(&raw_text);
+                    let timestamp = chrono::Utc::now().timestamp() as f64;
+                    let model_used = self.state.config.read().whisper_model_path.clone();
+                    let item = airctrl_core::types::TranscriptItem {
+                        id: format!("txn_{}", chrono::Utc::now().timestamp_millis()),
+                        timestamp,
+                        text: processed_text.clone(),
+                        raw_text,
+                        duration_ms: 450,
+                        model_used,
+                        confidence: 0.96,
+                        session_id: "live_session".to_string(),
+                        target_app: None,
+                        target_title: None,
+                        injected: true,
+                        starred: false,
+                    };
+                    let _ = self.state.transcript_store.store(item);
+                    processed_text
+                } else {
+                    self.state.stop_recording().map_err(IpcError::ExecutionFailed)?
+                };
+
                 let auto_inject = args
                     .get("auto_inject")
                     .and_then(Value::as_bool)
@@ -126,6 +170,13 @@ impl IpcBridge {
                     _ => "WindowSnap",
                 };
 
+                // Also execute optional custom keybind if provided alongside action
+                if let Some(kb) = args.get("keybind").and_then(Value::as_str) {
+                    if !kb.trim().is_empty() {
+                        let _ = self.send_keybind_combo(kb);
+                    }
+                }
+
                 // Parse voice command or action intent via airctrl-actions router
                 let command = match self.state.command_router.parse(action_str) {
                     ActionCommand::Unknown { .. } => {
@@ -149,7 +200,7 @@ impl IpcBridge {
                             "center" | "centerwindow" => {
                                 ActionCommand::WindowSnap { direction: SnapDirection::Center }
                             }
-                            "radialdialtoggle" | "toggledial" | "dial" => {
+                            "radialdialtoggle" | "toggledial" | "dial" | "radialdial" => {
                                 ActionCommand::RadialDialToggle {}
                             }
                             _ => ActionCommand::Unknown {
@@ -160,87 +211,7 @@ impl IpcBridge {
                     cmd => cmd,
                 };
 
-                let mut execution_info = json!({
-                    "command": command,
-                    "dispatched": true
-                });
-
-                match &command {
-                    ActionCommand::RadialDialToggle {} => {
-                        self.state.dial_overlay.write().toggle();
-                    }
-                    ActionCommand::LaunchApp { app_name, .. } => {
-                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
-                        let platform = airctrl_core::platform::create_platform_provider(false);
-                        let norm = app_name.to_lowercase();
-                        if let Some(win) = running.iter().find(|w| {
-                            w.process_name.to_lowercase().contains(&norm)
-                                || w.title.to_lowercase().contains(&norm)
-                        }) {
-                            let _ = platform.window.focus_window(win.id);
-                            let _ = platform.window.center_window(win.id);
-                            execution_info = json!({
-                                "command": command,
-                                "dispatched": true,
-                                "action_taken": "focused_and_centered",
-                                "window_id": win.id
-                            });
-                        } else {
-                            let pid = airctrl_actions::launch_application(app_name).ok();
-                            execution_info = json!({
-                                "command": command,
-                                "dispatched": true,
-                                "action_taken": "launched",
-                                "pid": pid
-                            });
-                        }
-                    }
-                    ActionCommand::CloseApp { app_name, .. } => {
-                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
-                        let platform = airctrl_core::platform::create_platform_provider(false);
-                        let norm = app_name.to_lowercase();
-                        let mut closed = 0;
-                        for win in running.iter().filter(|w| {
-                            w.process_name.to_lowercase().contains(&norm)
-                                || w.title.to_lowercase().contains(&norm)
-                        }) {
-                            if platform.window.close_window(win.id).is_ok() {
-                                closed += 1;
-                            }
-                        }
-                        execution_info = json!({
-                            "command": command,
-                            "dispatched": true,
-                            "action_taken": "closed",
-                            "closed_count": closed
-                        });
-                    }
-                    ActionCommand::CenterApp { app_name } => {
-                        let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
-                        let platform = airctrl_core::platform::create_platform_provider(false);
-                        let norm = app_name.to_lowercase();
-                        if let Some(win) = running.iter().find(|w| {
-                            w.process_name.to_lowercase().contains(&norm)
-                                || w.title.to_lowercase().contains(&norm)
-                        }) {
-                            let _ = platform.window.focus_window(win.id);
-                            let _ = platform.window.center_window(win.id);
-                            execution_info = json!({
-                                "command": command,
-                                "dispatched": true,
-                                "action_taken": "centered",
-                                "window_id": win.id
-                            });
-                        }
-                    }
-                    ActionCommand::WindowSnap { direction: SnapDirection::Center } => {
-                        let platform = airctrl_core::platform::create_platform_provider(false);
-                        if let Ok(active) = platform.window.get_active_window() {
-                            let _ = platform.window.center_window(active.id);
-                        }
-                    }
-                    _ => {}
-                }
+                let execution_info = self.execute_action_on_os(&command, action_str);
 
                 let _ = self
                     .state
@@ -916,6 +887,7 @@ impl IpcBridge {
                     .ok_or_else(|| IpcError::InvalidArguments("utterance string required".into()))?;
 
                 let cmd = self.state.command_router.parse(utterance);
+                let _ = self.execute_action_on_os(&cmd, utterance);
                 let _ = self.state.event_bus.publish(DomainEvent::ActionTriggered(cmd.clone()));
 
                 let (action_type, payload) = match &cmd {
@@ -1007,6 +979,7 @@ impl IpcBridge {
             "snapWindow" | "snap_window" => {
                 let pos_str = args
                     .get("position")
+                    .or_else(|| args.get("direction"))
                     .and_then(Value::as_str)
                     .ok_or_else(|| IpcError::InvalidArguments("Snap position required".into()))?;
 
@@ -1027,11 +1000,7 @@ impl IpcBridge {
                 let new_bounds = engine.compute_snap(pos);
                 *self.state.current_window_bounds.write() = new_bounds;
 
-                let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
-                if let Ok(active) = platform.window.get_active_window() {
-                    let _ = platform.window.set_window_bounds(active.id, new_bounds);
-                }
-
+                let _ = self.execute_action_on_os(&ActionCommand::SnapWindow { position: pos }, pos_str);
                 let _ = self.state.event_bus.publish(DomainEvent::ActionTriggered(ActionCommand::SnapWindow { position: pos }));
 
                 Ok(json!({
@@ -1808,7 +1777,334 @@ impl IpcBridge {
                 Ok(json!(result))
             }
 
+            "sendKeybind" | "send_keybind" | "simulateKeybind" | "simulate_keybind" => {
+                let keybind = args
+                    .get("keybind")
+                    .or_else(|| args.get("shortcut"))
+                    .or_else(|| args.get("keys"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| IpcError::InvalidArguments("keybind string required".into()))?;
+                self.send_keybind_combo(keybind)?;
+                Ok(json!({ "status": "success", "keybind": keybind }))
+            }
+
+            "movePointer" | "move_pointer" => {
+                let x = args.get("x").and_then(Value::as_i64).unwrap_or(0) as i32;
+                let y = args.get("y").and_then(Value::as_i64).unwrap_or(0) as i32;
+                let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
+                let _ = platform.input.move_pointer(x, y);
+                Ok(json!({ "status": "success", "x": x, "y": y }))
+            }
+
+            "clickPointer" | "click_pointer" => {
+                let btn = args.get("button").and_then(Value::as_str).unwrap_or("left");
+                let action = match btn.to_lowercase().as_str() {
+                    "right" => ClickAction::RightClick,
+                    "middle" => ClickAction::MiddleClick,
+                    "double" => ClickAction::DoubleClick,
+                    _ => ClickAction::LeftClick,
+                };
+                let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
+                let _ = platform.input.click_pointer(action);
+                Ok(json!({ "status": "success", "button": btn }))
+            }
+
             unknown => Err(IpcError::CommandNotFound(unknown.to_string())),
+        }
+    }
+
+    pub fn send_keybind_combo(&self, keybind: &str) -> Result<(), IpcError> {
+        use airctrl_core::types::{InputKey, ModifierKey};
+        let platform = airctrl_core::platform::create_platform_provider(self.state.config.read().is_mock_platform);
+        let parts: Vec<&str> = keybind.split('+').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+        if parts.is_empty() {
+            return Ok(());
+        }
+        let mut modifiers = Vec::new();
+        let mut main_key = InputKey::Space;
+        for (idx, part) in parts.iter().enumerate() {
+            let lower = part.to_lowercase();
+            let is_last = idx == parts.len() - 1;
+            match lower.as_str() {
+                "ctrl" | "control" if !is_last => modifiers.push(ModifierKey::Control),
+                "alt" | "option" if !is_last => modifiers.push(ModifierKey::Alt),
+                "shift" if !is_last => modifiers.push(ModifierKey::Shift),
+                "win" | "super" | "meta" | "cmd" if !is_last => modifiers.push(ModifierKey::Super),
+                "space" | "spacebar" => main_key = InputKey::Space,
+                "enter" | "return" => main_key = InputKey::Enter,
+                "esc" | "escape" => main_key = InputKey::Escape,
+                "tab" => main_key = InputKey::Tab,
+                "backspace" => main_key = InputKey::Backspace,
+                "delete" | "del" => main_key = InputKey::Delete,
+                "up" | "arrowup" => main_key = InputKey::ArrowUp,
+                "down" | "arrowdown" => main_key = InputKey::ArrowDown,
+                "left" | "arrowleft" => main_key = InputKey::ArrowLeft,
+                "right" | "arrowright" => main_key = InputKey::ArrowRight,
+                "pageup" | "pgup" => main_key = InputKey::Raw(0x21),
+                "pagedown" | "pgdn" => main_key = InputKey::Raw(0x22),
+                s if s.starts_with('f') && s.len() <= 3 && s[1..].parse::<u8>().is_ok() => {
+                    main_key = InputKey::FKey(s[1..].parse::<u8>().unwrap_or(1));
+                }
+                s if s.len() == 1 => {
+                    main_key = InputKey::Char(s.chars().next().unwrap_or(' '));
+                }
+                _ => {}
+            }
+        }
+        let _ = platform.input.send_key_combination(&modifiers, main_key);
+        Ok(())
+    }
+
+    pub fn execute_action_on_os(&self, command: &ActionCommand, raw_query: &str) -> Value {
+        let is_mock = self.state.config.read().is_mock_platform;
+        let platform = airctrl_core::platform::create_platform_provider(is_mock);
+
+        // Update geometry engine with real monitor work area if available
+        if !is_mock {
+            if let Ok(work) = platform.window.get_work_area() {
+                if work.width >= 640 && work.height >= 480 {
+                    *self.state.geometry_engine.write() =
+                        airctrl_actions::geometry::WindowGeometryEngine::new(work.width, work.height);
+                }
+            }
+        }
+
+        match command {
+            ActionCommand::RadialDialToggle {} => {
+                self.state.dial_overlay.write().toggle();
+                json!({ "command": command, "dispatched": true, "action_taken": "radial_dial_toggled" })
+            }
+            ActionCommand::LaunchApp { app_name, .. } => {
+                let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                let norm = app_name.to_lowercase();
+                if let Some(win) = running.iter().find(|w| {
+                    w.process_name.to_lowercase().contains(&norm)
+                        || w.title.to_lowercase().contains(&norm)
+                }) {
+                    let _ = platform.window.focus_window(win.id);
+                    let _ = platform.window.center_window(win.id);
+                    json!({
+                        "command": command,
+                        "dispatched": true,
+                        "action_taken": "focused_and_centered",
+                        "window_id": win.id
+                    })
+                } else {
+                    let pid = airctrl_actions::launch_application(app_name).ok();
+                    json!({
+                        "command": command,
+                        "dispatched": true,
+                        "action_taken": "launched",
+                        "pid": pid
+                    })
+                }
+            }
+            ActionCommand::CloseApp { app_name, target } => {
+                if target == "CurrentWindow" || app_name.is_empty() || app_name == "current window" {
+                    if let Ok(active) = platform.window.get_active_window() {
+                        let _ = platform.window.close_window(active.id);
+                    }
+                    json!({ "command": command, "dispatched": true, "action_taken": "closed_current" })
+                } else {
+                    let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                    let norm = app_name.to_lowercase();
+                    let mut closed = 0;
+                    for win in running.iter().filter(|w| {
+                        w.process_name.to_lowercase().contains(&norm)
+                            || w.title.to_lowercase().contains(&norm)
+                    }) {
+                        if platform.window.close_window(win.id).is_ok() {
+                            closed += 1;
+                        }
+                    }
+                    json!({
+                        "command": command,
+                        "dispatched": true,
+                        "action_taken": "closed",
+                        "closed_count": closed
+                    })
+                }
+            }
+            ActionCommand::WindowClose { .. } => {
+                if let Ok(active) = platform.window.get_active_window() {
+                    let _ = platform.window.close_window(active.id);
+                }
+                json!({ "command": command, "dispatched": true, "action_taken": "closed_current" })
+            }
+            ActionCommand::CenterApp { app_name } => {
+                let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                let norm = app_name.to_lowercase();
+                if let Some(win) = running.iter().find(|w| {
+                    w.process_name.to_lowercase().contains(&norm)
+                        || w.title.to_lowercase().contains(&norm)
+                }) {
+                    let _ = platform.window.focus_window(win.id);
+                    let _ = platform.window.center_window(win.id);
+                    json!({
+                        "command": command,
+                        "dispatched": true,
+                        "action_taken": "centered",
+                        "window_id": win.id
+                    })
+                } else {
+                    if let Ok(active) = platform.window.get_active_window() {
+                        let _ = platform.window.center_window(active.id);
+                    }
+                    json!({ "command": command, "dispatched": true, "action_taken": "centered_active" })
+                }
+            }
+            ActionCommand::SnapWindow { position } => {
+                let engine = *self.state.geometry_engine.read();
+                let new_bounds = engine.compute_snap(*position);
+                *self.state.current_window_bounds.write() = new_bounds;
+                if let Ok(active) = platform.window.get_active_window() {
+                    match position {
+                        SnapPosition::Maximize => {
+                            let _ = platform.window.maximize_window(active.id);
+                        }
+                        SnapPosition::Minimize => {
+                            let _ = platform.window.minimize_window(active.id);
+                        }
+                        SnapPosition::Restore => {
+                            let _ = platform.window.restore_window(active.id);
+                        }
+                        SnapPosition::Center => {
+                            let _ = platform.window.center_window(active.id);
+                        }
+                        _ => {
+                            let _ = platform.window.set_window_bounds(active.id, new_bounds);
+                        }
+                    }
+                }
+                json!({
+                    "command": command,
+                    "dispatched": true,
+                    "action_taken": "snapped",
+                    "bounds": new_bounds
+                })
+            }
+            ActionCommand::WindowSnap { direction } => {
+                let pos = match direction {
+                    SnapDirection::Left => SnapPosition::Left,
+                    SnapDirection::Right => SnapPosition::Right,
+                    SnapDirection::Top => SnapPosition::Top,
+                    SnapDirection::Bottom => SnapPosition::Bottom,
+                    SnapDirection::Center => SnapPosition::Center,
+                    SnapDirection::Maximize => SnapPosition::Maximize,
+                    SnapDirection::Minimize => SnapPosition::Minimize,
+                    SnapDirection::Restore => SnapPosition::Restore,
+                    SnapDirection::Fullscreen => SnapPosition::Fullscreen,
+                };
+                let engine = *self.state.geometry_engine.read();
+                let new_bounds = engine.compute_snap(pos);
+                *self.state.current_window_bounds.write() = new_bounds;
+                if let Ok(active) = platform.window.get_active_window() {
+                    match pos {
+                        SnapPosition::Maximize => {
+                            let _ = platform.window.maximize_window(active.id);
+                        }
+                        SnapPosition::Minimize => {
+                            let _ = platform.window.minimize_window(active.id);
+                        }
+                        SnapPosition::Restore => {
+                            let _ = platform.window.restore_window(active.id);
+                        }
+                        SnapPosition::Center => {
+                            let _ = platform.window.center_window(active.id);
+                        }
+                        _ => {
+                            let _ = platform.window.set_window_bounds(active.id, new_bounds);
+                        }
+                    }
+                }
+                json!({
+                    "command": command,
+                    "dispatched": true,
+                    "action_taken": "snapped",
+                    "bounds": new_bounds
+                })
+            }
+            ActionCommand::ResizeWindow { mode } => {
+                let base_bounds = if !is_mock {
+                    platform
+                        .window
+                        .get_active_window()
+                        .map(|w| w.bounds)
+                        .unwrap_or_else(|_| *self.state.current_window_bounds.read())
+                } else {
+                    *self.state.current_window_bounds.read()
+                };
+                let engine = *self.state.geometry_engine.read();
+                let new_bounds = engine.compute_resize(base_bounds, mode);
+                *self.state.current_window_bounds.write() = new_bounds;
+                if let Ok(active) = platform.window.get_active_window() {
+                    let _ = platform.window.set_window_bounds(active.id, new_bounds);
+                }
+                json!({
+                    "command": command,
+                    "dispatched": true,
+                    "action_taken": "resized",
+                    "bounds": new_bounds
+                })
+            }
+            ActionCommand::SwitchFocus { app_name }
+            | ActionCommand::WindowFocus { query: app_name, .. } => {
+                let running = airctrl_actions::crawl_running_applications().unwrap_or_default();
+                let norm = app_name.to_lowercase();
+                if let Some(win) = running.iter().find(|w| {
+                    w.process_name.to_lowercase().contains(&norm)
+                        || w.title.to_lowercase().contains(&norm)
+                }) {
+                    let _ = platform.window.focus_window(win.id);
+                    json!({ "command": command, "dispatched": true, "action_taken": "focused", "window_id": win.id })
+                } else {
+                    json!({ "command": command, "dispatched": true, "action_taken": "focus_target_not_found" })
+                }
+            }
+            ActionCommand::CycleWindow { direction } => {
+                let forward = *direction == CycleDirection::Next;
+                let _ = platform.window.cycle_window(forward);
+                json!({ "command": command, "dispatched": true, "action_taken": "cycled_window", "forward": forward })
+            }
+            ActionCommand::NavigateUi { element } => {
+                match element {
+                    UiTarget::NextField | UiTarget::Tab => {
+                        let _ = platform.input.send_key_combination(&[], airctrl_core::types::InputKey::Tab);
+                    }
+                    UiTarget::PrevField => {
+                        let _ = platform.input.send_key_combination(
+                            &[airctrl_core::types::ModifierKey::Shift],
+                            airctrl_core::types::InputKey::Tab,
+                        );
+                    }
+                    UiTarget::Enter => {
+                        let _ = platform.input.send_key_combination(&[], airctrl_core::types::InputKey::Enter);
+                    }
+                    UiTarget::Escape => {
+                        let _ = platform.input.send_key_combination(&[], airctrl_core::types::InputKey::Escape);
+                    }
+                }
+                json!({ "command": command, "dispatched": true, "action_taken": "ui_navigated" })
+            }
+            ActionCommand::Scroll { direction, amount }
+            | ActionCommand::SystemInput(SystemInputAction::Scroll { direction, amount }) => {
+                let _ = platform.input.scroll(*direction, *amount);
+                json!({ "command": command, "dispatched": true, "action_taken": "scrolled" })
+            }
+            ActionCommand::MouseClick { button, .. }
+            | ActionCommand::SystemInput(SystemInputAction::Click { button, .. }) => {
+                let _ = platform.input.click_pointer(*button);
+                json!({ "command": command, "dispatched": true, "action_taken": "clicked" })
+            }
+            ActionCommand::Unknown { .. } => {
+                if raw_query.contains('+') {
+                    let _ = self.send_keybind_combo(raw_query);
+                    json!({ "command": command, "dispatched": true, "action_taken": "keybind_sent" })
+                } else {
+                    json!({ "command": command, "dispatched": true })
+                }
+            }
+            _ => json!({ "command": command, "dispatched": true }),
         }
     }
 }

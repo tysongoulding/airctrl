@@ -116,6 +116,9 @@ fn main() {
             commands::export_summary,
             commands::get_meeting_archive,
             commands::seek_audio_offset,
+            commands::send_keybind,
+            commands::move_pointer,
+            commands::click_pointer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running airctrl tauri application");

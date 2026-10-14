@@ -279,13 +279,14 @@ export const SettingsHud: React.FC = () => {
             />
           )}
 
-          {activeNav === "gestures" && (
+          {/* Keep GesturesConfigSection mounted so Dual-Camera Splitter & Hand Tracking stay active across tabs and during meetings */}
+          <div className={activeNav === "gestures" ? "block" : "hidden"}>
             <GesturesConfigSection
               settings={settings}
               onUpdate={updateSettings}
               onAssignToSector={handleAssignToSector}
             />
-          )}
+          </div>
 
           {activeNav === "meetings" && (
             <PrivacyControlsCard settings={settings} onUpdate={updateSettings} />

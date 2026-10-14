@@ -100,7 +100,7 @@ export const GesturesConfigSection: React.FC<Props> = ({ settings, onUpdate }) =
       if (kb.action.toLowerCase() === "radial dial") {
         await tauriApi.toggleRadialDial();
       } else {
-        await tauriApi.triggerAction(kb.action);
+        await tauriApi.triggerAction(kb.action, { keybind: kb.keybind });
       }
     } catch (err) {
       console.warn("Gesture test error:", err);
@@ -161,14 +161,14 @@ export const GesturesConfigSection: React.FC<Props> = ({ settings, onUpdate }) =
         </div>
       </div>
 
-      {/* Tab 1: Live Hand Tracking & 21-Landmark Canvas */}
-      {activeTab === "camera" && (
+      {/* Tab 1: Live Hand Tracking & 21-Landmark Canvas (kept mounted so camera + hand gestures stay active in background) */}
+      <div className={activeTab === "camera" ? "block" : "hidden"}>
         <GesturesLiveView
           settings={settings}
           onUpdate={onUpdate}
           onOpenKeybindsTab={() => setActiveTab("keybinds")}
         />
-      )}
+      </div>
 
       {/* Tab 2: 6-Sector Radial Dial Configuration */}
       {activeTab === "dial" && <RadialConfigCard settings={settings} onUpdate={onUpdate} />}

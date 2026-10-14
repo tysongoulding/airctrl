@@ -99,12 +99,17 @@ export const SttConfigCard: React.FC<Props> = ({ settings, onUpdate }) => {
         setDiscoveredModels(models);
       }
     });
-    tauriApi.searchTranscripts("").then((res: any) => {
-      const items = Array.isArray(res) ? res : res?.results;
-      if (Array.isArray(items)) {
-        setHistoryItems(items);
-      }
-    });
+    const refreshHistory = () => {
+      tauriApi.searchTranscripts("").then((res: any) => {
+        const items = Array.isArray(res) ? res : res?.results;
+        if (Array.isArray(items)) {
+          setHistoryItems(items);
+        }
+      });
+    };
+    refreshHistory();
+    window.addEventListener("airctrl-transcript-added", refreshHistory);
+    return () => window.removeEventListener("airctrl-transcript-added", refreshHistory);
   }, []);
 
   useEffect(() => {

@@ -12,10 +12,11 @@ export async function invokeCommand<T = any>(cmd: string, args?: Record<string, 
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const snakeCmd = toSnakeCase(cmd);
+      const tauriArgs = args ? { args, payload: args, ...args } : { args: {} };
       try {
-        return await invoke<T>(snakeCmd, args);
+        return await invoke<T>(snakeCmd, tauriArgs);
       } catch {
-        return await invoke<T>(cmd, args);
+        return await invoke<T>(cmd, tauriArgs);
       }
     } catch (err) {
       console.warn(`[IPC Fallback] Failed to invoke '${cmd}' natively, routing to mock bridge:`, err);
@@ -31,7 +32,11 @@ export const tauriApi = {
   startRecording: (args?: any) => invokeCommand<{ status: string }>("startRecording", args),
   stopRecording: (args?: any) => invokeCommand<{ status: string; text: string }>("stopRecording", args),
   triggerAction: (action: string, params?: any) =>
-    invokeCommand<{ success: boolean; action: any }>("triggerAction", { action, ...params }),
+    invokeCommand<{ success: boolean; action: any; execution?: any }>("triggerAction", { action, ...params }),
+  sendKeybind: (keybind: string) => invokeCommand<{ status: string; keybind: string }>("sendKeybind", { keybind }),
+  movePointer: (x: number, y: number) => invokeCommand<{ status: string; x: number; y: number }>("movePointer", { x, y }),
+  clickPointer: (button: "left" | "right" | "middle" | "double") =>
+    invokeCommand<{ status: string; button: string }>("clickPointer", { button }),
   toggleRadialDial: (args?: any) => invokeCommand<{ dial_visible: boolean }>("toggleRadialDial", args),
   toggleSttOverlay: (args?: any) => invokeCommand<{ stt_overlay_visible: boolean }>("toggleSttOverlay", args),
   toggleCommandPalette: (args?: any) => invokeCommand<{ command_palette_visible: boolean }>("toggleCommandPalette", args),
@@ -52,7 +57,7 @@ export const tauriApi = {
   getRecordingMode: () => invokeCommand("getRecordingMode"),
   setOverlayPosition: (position: string) => invokeCommand("setOverlayPosition", { position }),
   getOverlayPosition: () => invokeCommand("getOverlayPosition"),
-  updateDictionary: (entries: Record<string, string>) => invokeCommand("updateDictionary", { entries }),
+  updateDictionary: (entries: Record<string, string>) => invokeCommand("updateDictionary", { entries, rules: entries }),
   getDictionary: () => invokeCommand("getDictionary"),
   togglePostProcessing: (enabled?: boolean) => invokeCommand("togglePostProcessing", enabled !== undefined ? { enabled } : {}),
   searchTranscripts: (query: string) => invokeCommand("searchTranscripts", { query }),
@@ -61,13 +66,13 @@ export const tauriApi = {
   getDebugDrawerStatus: () => invokeCommand("getDebugDrawerStatus"),
 
   // R2: Speech-to-Action 100% Hands-Free Commands
-  executeVoiceCommand: (command: string) => invokeCommand("executeVoiceCommand", { command }),
-  snapWindow: (direction: string) => invokeCommand("snapWindow", { direction }),
+  executeVoiceCommand: (command: string) => invokeCommand("executeVoiceCommand", { command, utterance: command }),
+  snapWindow: (direction: string) => invokeCommand("snapWindow", { direction, position: direction }),
   resizeWindow: (args: { mode: string; value?: string; width?: number; height?: number; percent?: number }) =>
     invokeCommand("resizeWindow", args),
   cycleWindow: (direction: "next" | "previous") => invokeCommand("cycleWindow", { direction }),
   navigateUi: (action: string, direction?: string, amount?: number) =>
-    invokeCommand("navigateUi", { action, direction, amount }),
+    invokeCommand("navigateUi", { action, element: action, direction, amount }),
 
   // R3: Meetily 1:1 Parity Commands
   getMixerStatus: () => invokeCommand("getMixerStatus"),
@@ -90,6 +95,7 @@ export const tauriApi = {
     invokeCommand("setGestureTrackingMode", { mode, sensitivity, cooldown_ms }),
   getVirtualCameraStatus: () => invokeCommand("getVirtualCameraStatus"),
   setVirtualCameraPrivacy: (privacy_muted: boolean, mute_both?: boolean) =>
-    invokeCommand("setVirtualCameraPrivacy", { privacy_muted, mute_both: mute_both ?? false }),
+    invokeCommand("setVirtualCameraPrivacy", { privacy_muted, dual_mute: mute_both ?? false }),
   getMultiHandGestureStatus: () => invokeCommand("getMultiHandGestureStatus"),
+  feedCameraFrame: (frame_id: number) => invokeCommand("feedCameraFrame", { frame_id }),
 };

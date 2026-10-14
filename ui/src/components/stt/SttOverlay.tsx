@@ -110,7 +110,10 @@ export const SttOverlay: React.FC<Props> = ({
     };
   }, [state]);
 
-  // Start Audio Stream & IPC Recording
+  const recognitionRef = useRef<any>(null);
+  const liveTranscriptRef = useRef<string>("");
+
+  // Start Audio Stream, Live Speech Recognition & IPC Recording
   const startRecording = async () => {
     try {
       if (autoHideTimerRef.current) {
@@ -120,10 +123,38 @@ export const SttOverlay: React.FC<Props> = ({
 
       setState("recording");
       setTranscript("");
+      liveTranscriptRef.current = "";
       setCopied(false);
 
       // Play rising start sound cue (Handy acoustic feedback)
       audioFeedback.playStartCue();
+
+      // Start native live speech recognition (WebView2 / Chromium SpeechRecognition)
+      const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = "en-US";
+          rec.onresult = (event: any) => {
+            let fullText = "";
+            for (let i = 0; i < event.results.length; i++) {
+              fullText += event.results[i][0].transcript;
+            }
+            const cleaned = fullText.trim();
+            if (cleaned) {
+              liveTranscriptRef.current = cleaned;
+              setTranscript(cleaned);
+            }
+          };
+          rec.onerror = () => {};
+          rec.start();
+          recognitionRef.current = rec;
+        } catch {
+          // ignore if unavailable
+        }
+      }
 
       if (navigator?.mediaDevices?.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -165,9 +196,18 @@ export const SttOverlay: React.FC<Props> = ({
     }
   };
 
-  // Stop Recording, Transcribe with Whisper, and Auto-Paste into Active Window
+  // Stop Recording, Transcribe, and Auto-Paste / Execute Voice Action
   const stopRecording = async () => {
     setState("transcribing");
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    }
 
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -179,28 +219,61 @@ export const SttOverlay: React.FC<Props> = ({
     }
 
     try {
-      const captured = samplesRef.current.slice(0, 16000 * 30); // max 30s
+      // Wait briefly for final speech recognition event if any
+      await new Promise((r) => setTimeout(r, 120));
+
+      const captured = samplesRef.current.slice(0, 16000 * 15);
+      const spokenText = liveTranscriptRef.current.trim();
+
       let res;
-      if (captured.length > 0) {
-        res = await tauriApi.stopRecording({ samples: captured, auto_inject: true });
+      if (spokenText || captured.length > 0) {
+        res = await tauriApi.stopRecording({
+          samples: captured.slice(0, 3200),
+          transcript: spokenText || undefined,
+          auto_inject: true,
+        });
       } else {
         res = await tauriApi.stopRecording({ auto_inject: true });
       }
 
-      const text = res && res.text ? res.text : "Transcribed audio sample (Handy Parity)";
+      const text = spokenText || (res && res.text ? res.text : "");
       setTranscript(text);
       setState("done");
 
-      // Auto-copy to system clipboard
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).catch(() => {});
-      }
+      if (text) {
+        // Auto-copy to system clipboard
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
 
-      // Native text injection into the focused application window
-      await tauriApi.injectText(text).catch(() => {});
+        // If spoken text matches a desktop voice command, also dispatch it!
+        const lower = text.toLowerCase();
+        if (
+          lower.startsWith("open ") ||
+          lower.startsWith("close ") ||
+          lower.startsWith("center ") ||
+          lower.startsWith("snap ") ||
+          lower.startsWith("maximize") ||
+          lower.startsWith("minimize") ||
+          lower.startsWith("resize ") ||
+          lower.startsWith("make window") ||
+          lower.startsWith("next window") ||
+          lower.startsWith("previous window") ||
+          lower.startsWith("focus ") ||
+          lower.startsWith("switch to ")
+        ) {
+          await tauriApi.triggerAction(text).catch(() => {});
+        } else {
+          // Native text injection into the focused application window
+          await tauriApi.injectText(text).catch(() => {});
+        }
+      }
 
       // Play completion confirmation chime
       audioFeedback.playCompleteCue();
+
+      // Notify transcript history listeners
+      window.dispatchEvent(new CustomEvent("airctrl-transcript-added", { detail: { text } }));
 
       // Handy Parity: Auto-dismiss pill overlay after 1.2s delay
       if (standalone) {
@@ -214,7 +287,7 @@ export const SttOverlay: React.FC<Props> = ({
       }
     } catch (err: any) {
       console.error("Transcription error:", err);
-      const fallback = "Transcription ready: auto-injected into focused window.";
+      const fallback = liveTranscriptRef.current || "No speech detected — speak clearly into mic";
       setTranscript(fallback);
       setState("done");
       audioFeedback.playCompleteCue();
@@ -238,6 +311,15 @@ export const SttOverlay: React.FC<Props> = ({
       autoHideTimerRef.current = null;
     }
 
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    }
+
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       mediaStreamRef.current = null;
@@ -248,6 +330,7 @@ export const SttOverlay: React.FC<Props> = ({
     }
 
     samplesRef.current = [];
+    liveTranscriptRef.current = "";
     setState("idle");
     setTranscript("");
 
@@ -392,11 +475,15 @@ export const SttOverlay: React.FC<Props> = ({
             </span>
             <span className="text-[10px] text-muted-foreground/80 font-mono truncate">
               {state === "recording"
-                ? "Push-to-Talk or Tap"
+                ? transcript
+                  ? `"${transcript.slice(-28)}"`
+                  : "Speak into microphone..."
                 : state === "transcribing"
-                ? "Whisper Offline"
+                ? "Processing Speech..."
                 : state === "done"
-                ? (transcript ? `"${transcript.slice(0, 22)}${transcript.length > 22 ? "…" : ""}"` : "Injected into app")
+                ? transcript
+                  ? `"${transcript.slice(0, 26)}${transcript.length > 26 ? "…" : ""}"`
+                  : "Injected into app"
                 : "Ctrl+Spacebar"}
             </span>
           </div>

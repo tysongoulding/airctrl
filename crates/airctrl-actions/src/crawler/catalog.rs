@@ -271,12 +271,46 @@ pub fn launch_application(path_or_name: &str) -> Result<u32, String> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        const DETACHED_PROCESS: u32 = 0x00000008;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        let trimmed = path_or_name.trim();
+        let lower = trimmed.to_lowercase();
+        let resolved = match lower.as_str() {
+            "notepad" => "notepad.exe".to_string(),
+            "calculator" | "calc" => "calc.exe".to_string(),
+            "explorer" | "file explorer" | "files" => "explorer.exe".to_string(),
+            "terminal" | "windows terminal" | "wt" => "wt.exe".to_string(),
+            "cmd" | "command prompt" => "cmd.exe".to_string(),
+            "powershell" => "powershell.exe".to_string(),
+            "settings" | "windows settings" => "ms-settings:".to_string(),
+            "task manager" | "taskmgr" => "taskmgr.exe".to_string(),
+            "paint" | "mspaint" => "mspaint.exe".to_string(),
+            "chrome" | "google chrome" => "chrome".to_string(),
+            "edge" | "microsoft edge" => "msedge".to_string(),
+            "code" | "vs code" | "vscode" | "visual studio code" => "code".to_string(),
+            "cursor" | "cursor ide" => "cursor".to_string(),
+            _ => {
+                if std::path::Path::new(trimmed).exists() {
+                    trimmed.to_string()
+                } else {
+                    let catalog = catalog_installed_applications();
+                    if let Some(found) = catalog.iter().find(|a| {
+                        a.name.to_lowercase() == lower
+                            || a.name.to_lowercase().contains(&lower)
+                    }) {
+                        found.path.clone()
+                    } else {
+                        trimmed.to_string()
+                    }
+                }
+            }
+        };
+
         let child = std::process::Command::new("cmd")
-            .args(["/C", "start", "", path_or_name])
-            .creation_flags(DETACHED_PROCESS)
+            .args(["/C", "start", "", &resolved])
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
-            .map_err(|e| format!("Failed to spawn {}: {}", path_or_name, e))?;
+            .map_err(|e| format!("Failed to spawn {}: {}", resolved, e))?;
         Ok(child.id())
     }
 
